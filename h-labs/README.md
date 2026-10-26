@@ -29,7 +29,7 @@ In se `0-00.png`, `0-15.png` aur `0-30.png` banengi. Jis line mein timecode na h
 - **Character Match:** character ki description, aur chahein to reference photos, taake har image mein wohi chehra aur kapde rahein
 - **Style Match:** 10 ready styles (Cinematic, 3D Pixar, Anime, Documentary...), apne notes aur style reference image
 - **Engines:** Auto, Imagen ya Nano Banana. Reference image ho to Auto khud Nano Banana use karta hai.
-- Ek waqt mein 1 se 4 images, limit (429) aane par khud retry, **Stop**, aur **Retry Failed**
+- Ek waqt mein 1 se 8 images, limit (429) aane par khud retry, **Stop**, aur **Retry Failed**
 - Har image par View, Regenerate (prompt badal kar), Download aur Remove
 - Kai images select karke ek saath download, regenerate ya remove
 - **Download ZIP**: saari images timecode naam ke saath
@@ -87,6 +87,6 @@ Limit (429) aate hi tool ruk jata hai, upar countdown dikhata hai aur waqt poora
 ## Agar image na bane
 
 - **"Access nahi mila"**: tool ko Gemini Canvas ke andar chalayein. Bahar (normal browser mein) is ko API key chahiye hoti hai.
-- **Limit hit (429)**: thori der ruk kar **Retry Failed** dabayein, ya Advanced mein Parallel ko 1 kar dein.
+- **Limit hit (429)**: thori der ruk kar **Retry Failed** dabayein, ya **Generation Speed** ko Safe kar dein.
 - **Safety filter**: prompt ke alfaaz thore badal kar Regenerate karein.
 - Agar Google model ka naam badal de to **Advanced settings** mein model ka naya naam likh dein.
