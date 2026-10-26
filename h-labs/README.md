@@ -45,6 +45,25 @@ Sidebar ke upar **Thumbnail** par click karein.
 - **Upload-ready copy:** har thumbnail ki ek chhoti JPG (1280×720 ya 1080×1920) ZIP ke `upload_ready` folder mein, YouTube par seedha upload ke liye.
 - 16:9 (YouTube) aur 9:16 (Shorts/TikTok cover) dono.
 
+## AI Quality Check (kharab images pakarna)
+
+Sidebar mein **AI Quality Check** on rakhein (default on).
+
+- Har image banne ke baad Gemini usay dekhta hai: ulti ya ziada ungliyan, bigra chehra, extra ya jure hue log, ajeeb text, prompt se match aur character se match.
+- Card par score aata hai, jaise `✓ 9/10`. Kharab image par orange **"⚠ 4/10 · Retry suggested"** aur neeche wajah likhi hoti hai.
+- **Auto-retry flagged:** flagged image khud dobara banti hai (1 ya 2 baar). Nayi aur purani mein se jo behtar ho wahi rehti hai.
+- **Strictness:** Strict, Normal ya Relaxed.
+- **Retry Flagged** button se baqi flagged images ek saath dobara banayein.
+- ZIP mein flagged images `flagged/` folder mein alag jati hain, taake editing mein ghalti se na lagein.
+- Har check ek chhoti si Gemini request hai, is liye yeh bhi limit mein ginti hai.
+
+## Progress panel aur view
+
+- Upar panel mein: kitne % ho gaye, Done, Speed (images/min), Time left, Checking, Flagged aur Failed.
+- **Filters:** All, Ready, Flagged, Failed.
+- **Images per row:** `+` se preview bara (kam images per line), `−` se chhota (zyada images per line), ya dropdown se 1 se 10 tak.
+- **Hide details** se image ke neeche ka text chhup jata hai aur sirf images dikhti hain.
+
 ## Auto-pause
 
 Limit (429) aate hi tool ruk jata hai, upar countdown dikhata hai aur waqt poora hone par khud dobara shuru ho jata hai. Har baar intezaar thora lamba hota hai, zyada se zyada 15 minute. **Resume now** se foran shuru kar sakte hain. Settings **Advanced** mein hain.
