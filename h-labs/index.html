@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>H Labs — Bulk Image Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{
+  --bg:#06050a;
+  --panel:rgba(20,18,30,.62);
+  --panel-2:rgba(30,27,45,.7);
+  --line:rgba(255,255,255,.07);
+  --line-2:rgba(255,255,255,.12);
+  --text:#f4f2ff;
+  --muted:#a19cb8;
+  --dim:#6b6684;
+  --violet:#8b5cf6;
+  --pink:#ec4899;
+  --cyan:#22d3ee;
+  --amber:#fbbf24;
+  --green:#34d399;
+  --red:#fb7185;
+  --grad:linear-gradient(120deg,#8b5cf6 0%,#ec4899 50%,#fbbf24 100%);
+  --grad-2:linear-gradient(120deg,#22d3ee 0%,#8b5cf6 100%);
+  --radius:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:"Inter",system-ui,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(139,92,246,.35);border-radius:10px}
+::-webkit-scrollbar-thumb:hover{background:rgba(236,72,153,.6)}
+
+/* ---------- animated backdrop ---------- */
+.backdrop{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.55;mix-blend-mode:screen;animation:drift 22s ease-in-out infinite alternate}
+.blob.b1{width:620px;height:620px;background:#6d28d9;top:-180px;left:-120px}
+.blob.b2{width:520px;height:520px;background:#db2777;bottom:-200px;right:-80px;animation-duration:26s;animation-delay:-6s}
+.blob.b3{width:420px;height:420px;background:#0891b2;top:35%;left:45%;opacity:.35;animation-duration:30s;animation-delay:-12s}
+@keyframes drift{
+  0%{transform:translate(0,0) scale(1)}
+  50%{transform:translate(80px,60px) scale(1.15)}
+  100%{transform:translate(-60px,100px) scale(.95)}
+}
+.gridlines{position:absolute;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:radial-gradient(ellipse at 50% 30%,#000 30%,transparent 80%);
+  -webkit-mask-image:radial-gradient(ellipse at 50% 30%,#000 30%,transparent 80%);
+}
+.noise{position:absolute;inset:0;opacity:.06;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* ---------- layout ---------- */
+.app{position:relative;z-index:1;display:flex;flex-direction:column;height:100vh}
+.glass{
+  background:var(--panel);
+  backdrop-filter:blur(22px) saturate(140%);
+  -webkit-backdrop-filter:blur(22px) saturate(140%);
+  border:1px solid var(--line);
+}
+
+header{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:14px 24px;border-width:0 0 1px 0;position:relative;z-index:30;
+}
+header::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:var(--grad);opacity:.6}
+.brand{display:flex;align-items:center;gap:14px}
+.logo{width:46px;height:46px;position:relative;flex-shrink:0}
+.logo svg{width:100%;height:100%;filter:drop-shadow(0 0 14px rgba(236,72,153,.55))}
+.logo::after{content:"";position:absolute;inset:-6px;border-radius:50%;background:conic-gradient(from 0deg,transparent,rgba(139,92,246,.5),transparent 40%);animation:spin 4s linear infinite;z-index:-1;filter:blur(8px)}
+.brand-title{font-family:"Space Grotesk",sans-serif;font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1;
+  background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;background-size:200% 100%;animation:shine 6s linear infinite}
+.brand-sub{font-size:10px;font-weight:600;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:8px}
+.brand-sub i{width:4px;height:4px;border-radius:50%;background:var(--cyan);display:inline-block;box-shadow:0 0 8px var(--cyan)}
+@keyframes shine{to{background-position:200% 0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.hdr-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.stat{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:rgba(0,0,0,.35);border:1px solid var(--line);font-size:12px;font-weight:600;color:var(--muted)}
+.stat b{color:var(--text);font-family:"Space Grotesk",sans-serif;font-size:14px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
+.dot.busy{background:var(--amber);box-shadow:0 0 10px var(--amber);animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+
+.progress{position:absolute;left:0;bottom:-1px;height:3px;width:0;background:var(--grad);box-shadow:0 0 18px rgba(236,72,153,.8);transition:width .4s ease;z-index:2}
+
+.body{flex:1;display:flex;min-height:0}
+
+/* ---------- sidebar ---------- */
+aside{
+  width:400px;flex-shrink:0;display:flex;flex-direction:column;border-width:0 1px 0 0;
+  overflow-y:auto;padding:18px;gap:14px;box-shadow:12px 0 40px rgba(0,0,0,.45);z-index:20
+}
+aside>*{flex-shrink:0}
+.card{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(140deg,rgba(139,92,246,.35),transparent 40%,transparent 60%,rgba(236,72,153,.25));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.card-t{display:flex;align-items:center;gap:10px;font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:14px;letter-spacing:.01em}
+.ico{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;flex-shrink:0}
+.ico svg{width:16px;height:16px}
+.ico.v{background:rgba(139,92,246,.18);color:#c4b5fd;box-shadow:inset 0 0 0 1px rgba(139,92,246,.35)}
+.ico.p{background:rgba(236,72,153,.16);color:#f9a8d4;box-shadow:inset 0 0 0 1px rgba(236,72,153,.35)}
+.ico.c{background:rgba(34,211,238,.14);color:#67e8f9;box-shadow:inset 0 0 0 1px rgba(34,211,238,.35)}
+.ico.a{background:rgba(251,191,36,.14);color:#fcd34d;box-shadow:inset 0 0 0 1px rgba(251,191,36,.35)}
+.card-b{margin-top:14px;display:flex;flex-direction:column;gap:12px}
+.card-b.collapsed{display:none}
+
+label.lbl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:7px}
+.row{display:flex;gap:10px}
+.row>*{flex:1;min-width:0}
+
+.input,select.input,textarea.input{
+  width:100%;background:rgba(0,0,0,.4);border:1px solid var(--line-2);border-radius:12px;padding:11px 13px;font-size:13px;outline:none;
+  transition:border-color .2s,box-shadow .2s,background .2s
+}
+.input:hover{border-color:rgba(255,255,255,.2)}
+.input:focus{border-color:var(--violet);box-shadow:0 0 0 4px rgba(139,92,246,.18);background:rgba(0,0,0,.55)}
+select.input{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:34px;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a19cb8' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat:no-repeat;background-position:right 12px center;background-size:16px}
+select.input option{background:#14121e}
+textarea.input{resize:vertical;line-height:1.6}
+
+/* aspect ratio tiles */
+.ratios{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ratio{display:flex;flex-direction:column;align-items:center;gap:7px;padding:11px 6px 9px;border-radius:12px;background:rgba(0,0,0,.35);border:1px solid var(--line-2);transition:all .2s;position:relative}
+.ratio:hover{border-color:rgba(255,255,255,.25);transform:translateY(-1px)}
+.ratio .shape{border:2px solid var(--muted);border-radius:4px;transition:all .2s}
+.ratio span{font-size:11px;font-weight:700;color:var(--text)}
+.ratio small{font-size:9.5px;color:var(--dim);font-weight:600;letter-spacing:.02em}
+.ratio.active{background:linear-gradient(160deg,rgba(139,92,246,.28),rgba(236,72,153,.18));border-color:rgba(236,72,153,.7);box-shadow:0 0 22px rgba(236,72,153,.25)}
+.ratio.active .shape{border-color:#fff;background:rgba(255,255,255,.15)}
+.ratio.active small{color:#f9a8d4}
+
+/* toggle */
+.toggle{position:relative;width:42px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle .tr{position:absolute;inset:0;border-radius:999px;background:#2b2840;border:1px solid var(--line-2);transition:all .25s;cursor:pointer}
+.toggle .tr::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:2px;left:2px;transition:all .25s cubic-bezier(.5,1.6,.5,1);box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.toggle input:checked+.tr{background:var(--grad);border-color:transparent;box-shadow:0 0 16px rgba(236,72,153,.45)}
+.toggle input:checked+.tr::after{transform:translateX(18px)}
+
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:6px 11px;border-radius:999px;font-size:11.5px;font-weight:600;background:rgba(0,0,0,.35);border:1px solid var(--line-2);color:var(--muted);transition:all .2s}
+.chip:hover{color:var(--text);border-color:rgba(255,255,255,.25)}
+.chip.active{color:#fff;background:linear-gradient(120deg,rgba(34,211,238,.25),rgba(139,92,246,.3));border-color:rgba(34,211,238,.6);box-shadow:0 0 14px rgba(34,211,238,.25)}
+
+/* reference uploads */
+.refs{display:flex;flex-wrap:wrap;gap:8px}
+.ref{width:62px;height:62px;border-radius:12px;overflow:hidden;position:relative;border:1px solid var(--line-2)}
+.ref img{width:100%;height:100%;object-fit:cover}
+.ref button{position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.75);color:#fff;font-size:11px;line-height:18px;display:grid;place-items:center}
+.ref button:hover{background:var(--red)}
+.ref-add{width:62px;height:62px;border-radius:12px;border:1.5px dashed rgba(255,255,255,.22);display:grid;place-items:center;color:var(--muted);transition:all .2s;cursor:pointer}
+.ref-add:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(34,211,238,.06)}
+.ref-add svg{width:20px;height:20px}
+.hint{font-size:11.5px;color:var(--dim);line-height:1.5}
+
+/* prompts */
+.prompt-box{min-height:230px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px}
+.count-pill{font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:rgba(139,92,246,.18);color:#d8b4fe;border:1px solid rgba(139,92,246,.4)}
+
+/* buttons */
+.btn-gen{
+  position:relative;width:100%;padding:17px;border-radius:16px;font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:15px;letter-spacing:.06em;
+  color:#fff;background:var(--grad);background-size:200% 100%;overflow:hidden;
+  box-shadow:0 10px 40px -8px rgba(236,72,153,.6),inset 0 1px 0 rgba(255,255,255,.3);transition:transform .15s,box-shadow .2s,background-position .6s;
+  display:flex;align-items:center;justify-content:center;gap:10px
+}
+.btn-gen:hover{background-position:100% 0;box-shadow:0 14px 50px -6px rgba(236,72,153,.85),inset 0 1px 0 rgba(255,255,255,.3);transform:translateY(-1px)}
+.btn-gen:active{transform:translateY(1px)}
+.btn-gen::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-20deg);animation:sweep 3.2s ease-in-out infinite}
+@keyframes sweep{0%{left:-60%}60%,100%{left:130%}}
+.btn-gen:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-gen svg{width:20px;height:20px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 14px;border-radius:13px;font-weight:600;font-size:13px;
+  background:rgba(255,255,255,.05);border:1px solid var(--line-2);transition:all .2s;white-space:nowrap}
+.btn:hover:not(:disabled){background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn svg{width:16px;height:16px}
+.btn.stop{background:rgba(251,113,133,.1);border-color:rgba(251,113,133,.5);color:#fda4af}
+.btn.stop:hover{background:var(--red);color:#fff}
+.btn.zip{background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.4);color:#a5f3fc}
+.btn.zip:hover:not(:disabled){background:rgba(34,211,238,.2);box-shadow:0 0 20px rgba(34,211,238,.3)}
+.btn.sm{padding:8px 11px;font-size:12px;border-radius:10px}
+.btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hide{display:none!important}
+
+/* ---------- main ---------- */
+main{flex:1;overflow-y:auto;padding:24px;position:relative}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.toolbar h2{font-family:"Space Grotesk",sans-serif;font-size:18px;font-weight:600;display:flex;align-items:center;gap:10px}
+.toolbar h2 small{font-family:"Inter";font-size:12px;color:var(--muted);font-weight:500}
+.bulk{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 14px;border-radius:999px;background:rgba(10,8,18,.8);border:1px solid rgba(139,92,246,.45);box-shadow:0 0 30px rgba(139,92,246,.25);animation:pop .25s ease}
+.bulk b{font-size:12px;color:#d8b4fe;margin-right:4px}
+@keyframes pop{from{transform:scale(.9);opacity:0}}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px;padding-bottom:80px}
+
+.tile{border-radius:18px;overflow:hidden;background:rgba(20,18,30,.75);border:1px solid var(--line);position:relative;transition:transform .25s,box-shadow .25s,border-color .25s;animation:rise .4s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(14px) scale(.98)}}
+.tile:hover{transform:translateY(-4px);border-color:rgba(236,72,153,.45);box-shadow:0 18px 50px -12px rgba(236,72,153,.35)}
+.tile.sel{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(34,211,238,.6),0 18px 50px -12px rgba(34,211,238,.35)}
+.tile .media{position:relative;background:#0c0a14;overflow:hidden}
+.tile .media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:zoom-in;animation:fadein .6s ease}
+@keyframes fadein{from{opacity:0;filter:blur(12px)}}
+.shimmer{position:absolute;inset:0;background:linear-gradient(110deg,#120f1d 25%,#2a2340 45%,#3b2a55 50%,#2a2340 55%,#120f1d 75%);background-size:300% 100%;animation:shim 1.6s linear infinite}
+@keyframes shim{from{background-position:150% 0}to{background-position:-150% 0}}
+.state{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:16px;font-size:12px;color:var(--muted)}
+.spinner{width:38px;height:38px;border-radius:50%;border:3px solid rgba(255,255,255,.1);border-top-color:var(--pink);border-right-color:var(--violet);animation:spin .8s linear infinite}
+.state.err{color:#fda4af}
+.state.err svg{width:30px;height:30px}
+.tc{position:absolute;top:10px;left:10px;z-index:3;padding:5px 10px;border-radius:999px;font-family:"Space Grotesk",sans-serif;font-size:12px;font-weight:700;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.15)}
+.tc::before{content:"⏱ ";opacity:.7}
+.pick{position:absolute;top:10px;right:10px;z-index:3;width:24px;height:24px;border-radius:8px;background:rgba(0,0,0,.6);border:1.5px solid rgba(255,255,255,.5);display:grid;place-items:center;transition:all .2s;opacity:0}
+.tile:hover .pick,.tile.sel .pick{opacity:1}
+.tile.sel .pick{background:var(--cyan);border-color:var(--cyan)}
+.pick svg{width:14px;height:14px;color:#000;opacity:0}
+.tile.sel .pick svg{opacity:1}
+.actions{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;gap:6px;justify-content:center;padding:28px 10px 10px;background:linear-gradient(transparent,rgba(0,0,0,.85));opacity:0;transform:translateY(8px);transition:all .25s}
+.tile:hover .actions{opacity:1;transform:none}
+.act{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(8px);transition:all .2s}
+.act:hover{background:var(--violet);border-color:var(--violet);transform:translateY(-2px)}
+.act.del:hover{background:var(--red);border-color:var(--red)}
+.act svg{width:16px;height:16px}
+.meta{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.meta .nm{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--muted)}
+.badge{font-size:10px;padding:3px 8px;border-radius:999px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.badge.queued{background:rgba(255,255,255,.07);color:var(--muted)}
+.badge.running{background:rgba(251,191,36,.15);color:var(--amber)}
+.badge.done{background:rgba(52,211,153,.15);color:var(--green)}
+.badge.error{background:rgba(251,113,133,.15);color:var(--red)}
+.meta p{font-size:12.5px;color:#d6d2ea;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* empty state */
+.empty{grid-column:1/-1;min-height:62vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px}
+.orb{width:140px;height:140px;position:relative;margin-bottom:8px}
+.orb .ring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(255,255,255,.12)}
+.orb .ring.r2{inset:18px;border-color:rgba(236,72,153,.35);animation:spin 10s linear infinite;border-style:dashed}
+.orb .ring.r3{inset:36px;background:radial-gradient(circle at 30% 30%,#a78bfa,#db2777 60%,#4c1d95);box-shadow:0 0 60px rgba(236,72,153,.6),inset -10px -10px 30px rgba(0,0,0,.4);animation:float 4s ease-in-out infinite}
+.orb .sat{position:absolute;width:10px;height:10px;border-radius:50%;background:var(--cyan);box-shadow:0 0 14px var(--cyan);top:50%;left:50%;margin:-5px;animation:orbit 5s linear infinite}
+@keyframes float{50%{transform:translateY(-8px)}}
+@keyframes orbit{from{transform:rotate(0) translateX(70px)}to{transform:rotate(360deg) translateX(70px)}}
+.empty h3{font-family:"Space Grotesk",sans-serif;font-size:30px;font-weight:700;letter-spacing:-.02em}
+.empty h3 span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.empty p{color:var(--muted);font-size:14px;max-width:460px;line-height:1.6}
+.steps{display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;justify-content:center}
+.step{padding:12px 16px;border-radius:14px;background:rgba(20,18,30,.7);border:1px solid var(--line);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:10px}
+.step b{width:24px;height:24px;border-radius:8px;display:grid;place-items:center;background:var(--grad);color:#fff;font-size:12px}
+
+/* modals */
+.modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(3,2,8,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}}
+.sheet{width:100%;max-width:560px;border-radius:22px;padding:22px;background:rgba(22,19,34,.95);border:1px solid var(--line-2);box-shadow:0 30px 80px rgba(0,0,0,.6);animation:pop .25s ease;display:flex;flex-direction:column;gap:14px}
+.sheet h4{font-family:"Space Grotesk",sans-serif;font-size:18px;display:flex;align-items:center;gap:10px}
+.sheet .foot{display:flex;justify-content:flex-end;gap:10px}
+.btn.primary{background:var(--grad);border:0;color:#fff;box-shadow:0 8px 30px -6px rgba(236,72,153,.6)}
+.btn.primary:hover{filter:brightness(1.1)}
+.viewer{position:relative;max-width:92vw;max-height:86vh;display:flex;flex-direction:column;align-items:center;gap:14px}
+.viewer img{max-width:92vw;max-height:76vh;border-radius:16px;box-shadow:0 30px 100px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.1)}
+.viewer .cap{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted);max-width:760px;text-align:center}
+.nav{position:fixed;top:50%;transform:translateY(-50%);width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.08);border:1px solid var(--line-2);transition:all .2s;z-index:61}
+.nav:hover{background:var(--violet)}
+.nav svg{width:22px;height:22px}
+.nav.l{left:20px}.nav.r{right:20px}
+.close{position:fixed;top:18px;right:20px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.08);border:1px solid var(--line-2);z-index:61}
+.close:hover{background:var(--red)}
+.close svg{width:20px;height:20px}
+
+/* toast */
+#toast{position:fixed;left:50%;bottom:-120px;transform:translateX(-50%);z-index:80;padding:13px 20px;border-radius:999px;font-size:13px;font-weight:600;
+  background:rgba(22,19,34,.95);border:1px solid var(--line-2);box-shadow:0 20px 50px rgba(0,0,0,.5);display:flex;align-items:center;gap:10px;
+  transition:bottom .5s cubic-bezier(.68,-.55,.265,1.55);backdrop-filter:blur(10px);max-width:90vw}
+#toast.show{bottom:28px}
+#toast .ti{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;flex-shrink:0}
+#toast.ok .ti{background:rgba(52,211,153,.2);color:var(--green)}
+#toast.bad .ti{background:rgba(251,113,133,.2);color:var(--red)}
+#toast.info .ti{background:rgba(139,92,246,.25);color:#c4b5fd}
+
+.foot-note{text-align:center;font-size:10.5px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;padding:4px 0 2px}
+.foot-note span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:700}
+
+details.adv summary{cursor:pointer;font-size:12px;color:var(--muted);font-weight:600;list-style:none;display:flex;align-items:center;gap:6px}
+details.adv summary::-webkit-details-marker{display:none}
+details.adv summary::before{content:"▸";transition:transform .2s;display:inline-block}
+details.adv[open] summary::before{transform:rotate(90deg)}
+details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
+
+@media (max-width:900px){
+  body{overflow:auto}
+  .app{height:auto;min-height:100vh}
+  .body{flex-direction:column}
+  aside{width:100%;border-width:0 0 1px 0}
+  main{overflow:visible;padding:16px}
+  header{padding:12px 16px;flex-wrap:wrap}
+  .hdr-right .stat.opt{display:none}
+  .brand-sub{letter-spacing:.14em;font-size:9px;white-space:nowrap}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+}
+</style>
+</head>
+<body>
+<div class="backdrop">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="gridlines"></div><div class="noise"></div>
+</div>
+
+<div class="app">
+  <header class="glass">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 48 48" fill="none">
+          <defs>
+            <linearGradient id="lg" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#8b5cf6"/><stop offset=".55" stop-color="#ec4899"/><stop offset="1" stop-color="#fbbf24"/>
+            </linearGradient>
+          </defs>
+          <path d="M24 2.5 42.6 13.25v21.5L24 45.5 5.4 34.75v-21.5L24 2.5Z" fill="#0f0c18" stroke="url(#lg)" stroke-width="2.5"/>
+          <path d="M16.5 14.5v19M31.5 14.5v19M16.5 24h15" stroke="url(#lg)" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">H Labs</div>
+        <div class="brand-sub">Bulk Image Studio <i></i> Timecode Engine</div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <div class="stat opt">Total <b id="st-total">0</b></div>
+      <div class="stat opt">Done <b id="st-done" style="color:var(--green)">0</b></div>
+      <div class="stat opt">Failed <b id="st-fail" style="color:var(--red)">0</b></div>
+      <div class="stat"><span class="dot" id="st-dot"></span><span id="st-text">System Ready</span></div>
+    </div>
+    <div class="progress" id="progress"></div>
+  </header>
+
+  <div class="body">
+    <aside class="glass">
+
+      <!-- Format -->
+      <section class="card">
+        <div class="card-h">
+          <div class="card-t"><span class="ico v"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg></span>Format &amp; Size</div>
+        </div>
+        <div class="card-b">
+          <div class="ratios" id="ratios"></div>
+          <div class="row">
+            <div class="field">
+              <label class="lbl" for="fmt">File Type</label>
+              <select id="fmt" class="input">
+                <option value="png">PNG</option>
+                <option value="jpeg">JPG (smaller)</option>
+                <option value="webp">WEBP</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="lbl" for="engine">Engine</label>
+              <select id="engine" class="input">
+                <option value="auto">Auto (best)</option>
+                <option value="imagen">Imagen</option>
+                <option value="gemini">Nano Banana</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Character -->
+      <section class="card">
+        <div class="card-h">
+          <div class="card-t"><span class="ico p"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>Character Match</div>
+          <label class="toggle"><input type="checkbox" id="ccToggle"><span class="tr"></span></label>
+        </div>
+        <div class="card-b collapsed" id="ccBody">
+          <div class="field">
+            <label class="lbl" for="ccDesc">Character Description</label>
+            <textarea id="ccDesc" class="input" rows="3" placeholder="Ethan: 30 year old man, short black hair, light beard, blue denim jacket, white t-shirt..."></textarea>
+          </div>
+          <div class="field">
+            <label class="lbl">Reference Images <span style="text-transform:none;letter-spacing:0;color:var(--dim)">(optional, max 3)</span></label>
+            <div class="refs" id="ccRefs"></div>
+            <div class="hint">Reference image lagane se same face/outfit har image mein rehta hai (Nano Banana use hoga).</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Style -->
+      <section class="card">
+        <div class="card-h">
+          <div class="card-t"><span class="ico c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 1 0 0 18c1 0 1.5-.8 1.5-1.6 0-.5-.2-.9-.5-1.2-.3-.4-.5-.8-.5-1.3 0-1 .8-1.7 1.8-1.7H16a5 5 0 0 0 5-5c0-4-4-7.2-9-7.2Z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="15.5" cy="8" r="1"/></svg></span>Style Match</div>
+          <label class="toggle"><input type="checkbox" id="scToggle"><span class="tr"></span></label>
+        </div>
+        <div class="card-b collapsed" id="scBody">
+          <div class="chips" id="styleChips"></div>
+          <div class="field">
+            <label class="lbl" for="scDesc">Custom Style Notes</label>
+            <textarea id="scDesc" class="input" rows="2" placeholder="Moody teal &amp; orange grading, film grain, 35mm lens..."></textarea>
+          </div>
+          <div class="field">
+            <label class="lbl">Style Reference <span style="text-transform:none;letter-spacing:0;color:var(--dim)">(optional, max 2)</span></label>
+            <div class="refs" id="scRefs"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Prompts -->
+      <section class="card">
+        <div class="card-h">
+          <div class="card-t"><span class="ico a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>Prompts List</div>
+          <span class="count-pill" id="promptCount">0 prompts</span>
+        </div>
+        <div class="card-b">
+          <textarea id="prompts" class="input prompt-box" spellcheck="false" placeholder="#0-00 Ethan sitting in a cozy cafe, morning light&#10;#0-15 Close up of a steaming coffee cup&#10;#0-30 Ethan walking on a rainy street at night&#10;&#10;Har line = 1 image. Timecode se file ka naam banega (0-00.png, 0-15.png...)"></textarea>
+          <details class="adv">
+            <summary>Advanced settings</summary>
+            <div class="inner">
+              <div class="row">
+                <div class="field">
+                  <label class="lbl" for="conc">Parallel</label>
+                  <select id="conc" class="input">
+                    <option value="1">1 at a time</option>
+                    <option value="2" selected>2 at a time</option>
+                    <option value="3">3 at a time</option>
+                    <option value="4">4 at a time</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label class="lbl" for="retries">Auto Retry</label>
+                  <select id="retries" class="input">
+                    <option value="0">Off</option>
+                    <option value="2">2 times</option>
+                    <option value="4" selected>4 times</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field">
+                <label class="lbl" for="suffix">Add to every prompt</label>
+                <input id="suffix" class="input" placeholder="e.g. ultra detailed, 8k, cinematic lighting">
+              </div>
+              <div class="card-h" style="padding:2px 0">
+                <span style="font-size:13px;color:var(--muted)">No text / watermark in images</span>
+                <label class="toggle"><input type="checkbox" id="noText" checked><span class="tr"></span></label>
+              </div>
+              <div class="card-h" style="padding:2px 0">
+                <span style="font-size:13px;color:var(--muted)">Resize to exact size</span>
+                <label class="toggle"><input type="checkbox" id="exact" checked><span class="tr"></span></label>
+              </div>
+              <div class="field">
+                <label class="lbl" for="mImagen">Imagen models (comma)</label>
+                <input id="mImagen" class="input" spellcheck="false">
+              </div>
+              <div class="field">
+                <label class="lbl" for="mGemini">Nano Banana models (comma)</label>
+                <input id="mGemini" class="input" spellcheck="false">
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:auto">
+        <button class="btn-gen" id="genBtn">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.8 15.9 9 18.75l-.8-2.85a4.5 4.5 0 0 0-3.1-3.1L2.25 12l2.85-.8a4.5 4.5 0 0 0 3.1-3.1L9 5.25l.8 2.85a4.5 4.5 0 0 0 3.1 3.1l2.85.8-2.85.8a4.5 4.5 0 0 0-3.1 3.1ZM18.26 8.7 18 9.75l-.26-1.04a3.4 3.4 0 0 0-2.45-2.45L14.25 6l1.04-.26a3.4 3.4 0 0 0 2.45-2.45L18 2.25l.26 1.04a3.4 3.4 0 0 0 2.45 2.45L21.75 6l-1.04.26a3.4 3.4 0 0 0-2.45 2.45Z"/></svg>
+          <span id="genText">GENERATE IMAGES</span>
+        </button>
+        <button class="btn stop hide" id="stopBtn">
+          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="3"/></svg>STOP GENERATION
+        </button>
+        <div class="btn-grid">
+          <button class="btn zip" id="zipBtn" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Download ZIP
+          </button>
+          <button class="btn" id="retryBtn" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v6h6M20 20v-6h-6"/><path d="M20 10a8 8 0 0 0-14.9-3M4 14a8 8 0 0 0 14.9 3"/></svg>Retry Failed
+          </button>
+        </div>
+        <div class="foot-note">Powered by <span>H Labs</span></div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="toolbar">
+        <h2>Studio <small id="subInfo">Paste prompts &amp; hit generate</small></h2>
+        <div class="bulk hide" id="bulkBar">
+          <b id="selCount">0 selected</b>
+          <button class="btn sm" id="selAll">Select all</button>
+          <button class="btn sm" id="selDl">Download</button>
+          <button class="btn sm" id="selRegen">Regenerate</button>
+          <button class="btn sm stop" id="selDel">Remove</button>
+          <button class="btn sm" id="selClear">✕</button>
+        </div>
+      </div>
+      <div class="grid" id="grid">
+        <div class="empty" id="empty">
+          <div class="orb"><div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div><div class="sat"></div></div>
+          <h3>Ready to <span>Create</span></h3>
+          <p>Left side par timecode wale prompts paste karein. Har line se ek image banegi aur file ka naam timecode jaisa hoga, taake editing mein seedha timeline par lag jaye.</p>
+          <div class="steps">
+            <div class="step"><b>1</b>Prompts paste</div>
+            <div class="step"><b>2</b>Ratio &amp; style choose</div>
+            <div class="step"><b>3</b>Generate &amp; ZIP</div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- regenerate modal -->
+<div class="modal hide" id="regenModal">
+  <div class="sheet">
+    <h4><span class="ico v"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v6h6"/><path d="M20 10a8 8 0 0 0-14.9-3"/></svg></span>Regenerate <span id="regenTc" style="color:var(--muted);font-size:14px"></span></h4>
+    <textarea id="regenPrompt" class="input" rows="5"></textarea>
+    <div class="foot">
+      <button class="btn" id="regenCancel">Cancel</button>
+      <button class="btn primary" id="regenGo">Regenerate</button>
+    </div>
+  </div>
+</div>
+
+<!-- viewer -->
+<div class="modal hide" id="viewModal">
+  <button class="close" id="viewClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  <button class="nav l" id="viewPrev" aria-label="Previous"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <button class="nav r" id="viewNext" aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>
+  <div class="viewer">
+    <img id="viewImg" alt="">
+    <div class="cap"><span class="tc" style="position:static" id="viewTc"></span><span id="viewTxt"></span></div>
+    <button class="btn primary" id="viewDl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Download</button>
+  </div>
+</div>
+
+<div id="toast"><span class="ti" id="toastIcon">✓</span><span id="toastMsg"></span></div>
+<input type="file" id="filePick" accept="image/*" multiple class="hide">
+
+<script>
+(() => {
+  // In Gemini Canvas the key stays empty; Canvas adds access automatically.
+  const apiKey = "";
+  const API = "https://generativelanguage.googleapis.com/v1beta/models/";
+
+  const DEFAULT_IMAGEN = "imagen-4.0-generate-001, imagen-3.0-generate-002";
+  const DEFAULT_GEMINI = "gemini-2.5-flash-image, gemini-2.5-flash-image-preview";
+
+  const RATIOS = [
+    { id: "square",   label: "1:1",  sub: "Square",       ar: "1:1",  w: 1536, h: 1536 },
+    { id: "portrait", label: "9:16", sub: "Shorts/TikTok", ar: "9:16", w: 1080, h: 1920 },
+    { id: "landscape",label: "16:9", sub: "YouTube HD",   ar: "16:9", w: 1920, h: 1080 },
+    { id: "thumb",    label: "16:9", sub: "Thumbnail",    ar: "16:9", w: 1280, h: 720 },
+    { id: "classic",  label: "4:3",  sub: "Classic",      ar: "4:3",  w: 1440, h: 1080 },
+    { id: "tall",     label: "3:4",  sub: "Post",         ar: "3:4",  w: 1080, h: 1440 },
+  ];
+
+  const STYLES = [
+    ["Cinematic", "cinematic film still, dramatic lighting, shallow depth of field, color graded"],
+    ["Realistic", "photorealistic, natural lighting, high detail, shot on DSLR"],
+    ["3D Pixar", "3D animated movie style, Pixar-like, soft lighting, expressive characters"],
+    ["Anime", "anime style, clean line art, vibrant colors, detailed background"],
+    ["Documentary", "dark documentary style, moody, desaturated, gritty realism"],
+    ["Oil Painting", "classical oil painting, visible brush strokes, rich colors"],
+    ["Comic", "comic book illustration, bold ink outlines, halftone shading"],
+    ["Watercolor", "soft watercolor illustration, paper texture, pastel tones"],
+    ["Stick Figure", "simple hand-drawn stick figure illustration on white background, minimal"],
+    ["Horror", "eerie horror atmosphere, dark shadows, fog, unsettling mood"],
+  ];
+
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem("hlabs_" + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem("hlabs_" + k, JSON.stringify(v)); } catch (e) {} },
+  };
+
+  const state = {
+    ratio: store.get("ratio", "landscape"),
+    style: store.get("style", "Cinematic"),
+    items: [],
+    running: false,
+    stop: false,
+    ccRefs: [],
+    scRefs: [],
+    viewIndex: -1,
+    regenId: null,
+    pickTarget: null,
+  };
+  let uid = 0;
+
+  /* ---------- toast ---------- */
+  let toastTimer;
+  function toast(msg, type = "ok") {
+    const t = $("toast");
+    t.className = type + " show";
+    $("toastIcon").textContent = type === "ok" ? "✓" : type === "bad" ? "!" : "i";
+    $("toastMsg").textContent = msg;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 3200);
+  }
+
+  /* ---------- ratios ---------- */
+  function renderRatios() {
+    const box = $("ratios");
+    box.innerHTML = "";
+    RATIOS.forEach((r) => {
+      const [a, b] = r.ar.split(":").map(Number);
+      const scale = 26 / Math.max(a, b);
+      const el = document.createElement("button");
+      el.className = "ratio" + (state.ratio === r.id ? " active" : "");
+      el.innerHTML = `<div class="shape" style="width:${a * scale}px;height:${b * scale}px"></div><span>${r.label}</span><small>${r.sub}</small>`;
+      el.title = `${r.w} × ${r.h}`;
+      el.onclick = () => { state.ratio = r.id; store.set("ratio", r.id); renderRatios(); };
+      box.appendChild(el);
+    });
+  }
+  const currentRatio = () => RATIOS.find((r) => r.id === state.ratio) || RATIOS[2];
+
+  /* ---------- styles ---------- */
+  function renderStyles() {
+    const box = $("styleChips");
+    box.innerHTML = "";
+    STYLES.forEach(([name]) => {
+      const c = document.createElement("button");
+      c.className = "chip" + (state.style === name ? " active" : "");
+      c.textContent = name;
+      c.onclick = () => { state.style = state.style === name ? "" : name; store.set("style", state.style); renderStyles(); };
+      box.appendChild(c);
+    });
+  }
+
+  /* ---------- toggles ---------- */
+  function bindToggle(toggleId, bodyId) {
+    const t = $(toggleId);
+    t.checked = store.get(toggleId, false);
+    const sync = () => { $(bodyId).classList.toggle("collapsed", !t.checked); store.set(toggleId, t.checked); };
+    t.addEventListener("change", sync);
+    sync();
+  }
+
+  /* ---------- reference images ---------- */
+  function renderRefs(kind) {
+    const list = kind === "cc" ? state.ccRefs : state.scRefs;
+    const max = kind === "cc" ? 3 : 2;
+    const box = $(kind + "Refs");
+    box.innerHTML = "";
+    list.forEach((r, i) => {
+      const d = document.createElement("div");
+      d.className = "ref";
+      d.innerHTML = `<img src="${r.url}" alt=""><button title="Remove">✕</button>`;
+      d.querySelector("button").onclick = () => { list.splice(i, 1); renderRefs(kind); };
+      box.appendChild(d);
+    });
+    if (list.length < max) {
+      const add = document.createElement("div");
+      add.className = "ref-add";
+      add.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>`;
+      add.onclick = () => { state.pickTarget = kind; $("filePick").value = ""; $("filePick").click(); };
+      box.appendChild(add);
+    }
+  }
+
+  function loadAndShrink(file, maxSide = 1024) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onerror = reject;
+      fr.onload = () => {
+        const img = new Image();
+        img.onerror = reject;
+        img.onload = () => {
+          const s = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const c = document.createElement("canvas");
+          c.width = Math.round(img.width * s);
+          c.height = Math.round(img.height * s);
+          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+          const url = c.toDataURL("image/jpeg", 0.9);
+          resolve({ url, mime: "image/jpeg", data: url.split(",")[1] });
+        };
+        img.src = fr.result;
+      };
+      fr.readAsDataURL(file);
+    });
+  }
+
+  $("filePick").addEventListener("change", async (e) => {
+    const kind = state.pickTarget;
+    if (!kind) return;
+    const list = kind === "cc" ? state.ccRefs : state.scRefs;
+    const max = kind === "cc" ? 3 : 2;
+    for (const f of Array.from(e.target.files)) {
+      if (list.length >= max) break;
+      try { list.push(await loadAndShrink(f)); } catch (err) { toast("Image load nahi hui", "bad"); }
+    }
+    renderRefs(kind);
+  });
+
+  /* ---------- prompt parsing ---------- */
+  const TC_RE = /^\s*#?\s*(\d{1,2}(?:\s*[:\-.]\s*\d{1,2}){1,2})\s*[-–—:|)\]]?\s*(.*)$/;
+
+  function parsePrompts(text) {
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const used = {};
+    return lines.map((line, i) => {
+      const m = line.match(TC_RE);
+      let tc = "", prompt = line;
+      if (m && m[2]) { tc = m[1].replace(/\s+/g, ""); prompt = m[2].trim(); }
+      let name = tc ? tc.replace(/[:.]/g, "-") : String(i + 1).padStart(3, "0");
+      if (used[name]) { used[name]++; name = name + "_" + used[name]; } else used[name] = 1;
+      return { tc: tc || "#" + (i + 1), name, prompt };
+    }).filter((p) => p.prompt);
+  }
+
+  function updateCount() {
+    const n = parsePrompts($("prompts").value).length;
+    $("promptCount").textContent = n + (n === 1 ? " prompt" : " prompts");
+  }
+
+  /* ---------- prompt building ---------- */
+  function buildPrompt(item) {
+    const parts = [item.prompt];
+    const r = currentRatio();
+    if ($("ccToggle").checked) {
+      const d = $("ccDesc").value.trim();
+      if (d) parts.push(`Main character (must look exactly the same in every image): ${d}.`);
+      if (state.ccRefs.length) parts.push("Keep the character's face, hair, body and outfit identical to the reference image(s).");
+    }
+    if ($("scToggle").checked) {
+      const preset = STYLES.find((s) => s[0] === state.style);
+      if (preset) parts.push(`Art style: ${preset[1]}.`);
+      const sd = $("scDesc").value.trim();
+      if (sd) parts.push(`Style notes: ${sd}.`);
+      if (state.scRefs.length) parts.push("Match the visual style, colors and lighting of the style reference image(s).");
+    }
+    const sfx = $("suffix").value.trim();
+    if (sfx) parts.push(sfx);
+    const orient = r.ar === "1:1" ? "square" : (r.w > r.h ? "horizontal landscape" : "vertical portrait");
+    parts.push(`Composition: ${orient} ${r.ar} frame.`);
+    if ($("noText").checked) parts.push("No text, no letters, no captions, no watermark, no logo.");
+    return parts.join(" ");
+  }
+
+  /* ---------- API ---------- */
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const modelList = (id, def) => ($(id).value.trim() || def).split(",").map((s) => s.trim()).filter(Boolean);
+
+  class ApiError extends Error {
+    constructor(status, msg) { super(msg); this.status = status; }
+  }
+
+  async function postJSON(url, body) {
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    let json = null;
+    try { json = await res.json(); } catch (e) {}
+    if (!res.ok) {
+      const msg = (json && json.error && json.error.message) || `HTTP ${res.status}`;
+      throw new ApiError(res.status, msg);
+    }
+    return json;
+  }
+
+  async function withRetry(fn) {
+    const tries = Number($("retries").value) || 0;
+    let wait = 2500;
+    for (let a = 0; ; a++) {
+      if (state.stop) throw new ApiError(0, "Stopped");
+      try { return await fn(); }
+      catch (e) {
+        const retryable = e.status === 429 || e.status >= 500 || e.status === undefined || e instanceof TypeError;
+        if (!retryable || a >= tries) throw e;
+        await sleep(wait + Math.random() * 800);
+        wait *= 2;
+      }
+    }
+  }
+
+  async function imagen(model, prompt, ar) {
+    const json = await postJSON(`${API}${model}:predict?key=${apiKey}`, {
+      instances: [{ prompt }],
+      parameters: { sampleCount: 1, aspectRatio: ar },
+    });
+    const p = json && json.predictions && json.predictions[0];
+    if (!p || !p.bytesBase64Encoded) throw new ApiError(422, "Image nahi bani (safety filter ya khali jawab). Prompt badal kar dobara try karein.");
+    return { mime: p.mimeType || "image/png", data: p.bytesBase64Encoded };
+  }
+
+  async function gemini(model, prompt, ar, refs) {
+    const parts = [{ text: `Generate an image. ${prompt}` }];
+    refs.forEach((r) => parts.push({ inlineData: { mimeType: r.mime, data: r.data } }));
+    const base = { contents: [{ parts }], generationConfig: { responseModalities: ["TEXT", "IMAGE"] } };
+    const withCfg = JSON.parse(JSON.stringify(base));
+    withCfg.generationConfig.imageConfig = { aspectRatio: ar };
+    let json;
+    try { json = await postJSON(`${API}${model}:generateContent?key=${apiKey}`, withCfg); }
+    catch (e) {
+      // older models may not know imageConfig; try once without it
+      if (e.status === 400) json = await postJSON(`${API}${model}:generateContent?key=${apiKey}`, base);
+      else throw e;
+    }
+    const cand = json && json.candidates && json.candidates[0];
+    const out = cand && cand.content && cand.content.parts && cand.content.parts.find((p) => p.inlineData && p.inlineData.data);
+    if (!out) throw new ApiError(422, "Image nahi bani (safety filter ya khali jawab). Prompt badal kar dobara try karein.");
+    return { mime: out.inlineData.mimeType || "image/png", data: out.inlineData.data };
+  }
+
+  // Try each model in order; move on when a model is missing or unsupported.
+  const deadModels = new Set();
+  async function tryModels(models, call) {
+    let last;
+    const live = models.filter((m) => !deadModels.has(m));
+    for (const m of (live.length ? live : models)) {
+      try { return await withRetry(() => call(m)); }
+      catch (e) {
+        last = e;
+        if (state.stop) throw e;
+        const skip = e.status === 404 || e.status === 403 || (e.status === 400 && /not (found|supported)|unknown|invalid model/i.test(e.message));
+        if (!skip) throw e;
+        deadModels.add(m);
+      }
+    }
+    throw last || new ApiError(0, "Koi model available nahi");
+  }
+
+  async function generateImage(item) {
+    const r = currentRatio();
+    const prompt = buildPrompt(item);
+    const refs = [
+      ...($("ccToggle").checked ? state.ccRefs : []),
+      ...($("scToggle").checked ? state.scRefs : []),
+    ];
+    let engine = $("engine").value;
+    if (engine === "auto") engine = refs.length ? "gemini" : "imagen";
+
+    const runGemini = () => tryModels(modelList("mGemini", DEFAULT_GEMINI), (m) => gemini(m, prompt, r.ar, refs));
+    const runImagen = () => tryModels(modelList("mImagen", DEFAULT_IMAGEN), (m) => imagen(m, prompt, r.ar));
+
+    let img;
+    if (engine === "imagen") {
+      try { img = await runImagen(); }
+      catch (e) { if (state.stop || e.status === 422) throw e; img = await runGemini(); }
+    } else {
+      try { img = await runGemini(); }
+      catch (e) { if (state.stop || refs.length || e.status === 422) throw e; img = await runImagen(); }
+    }
+    return finalize(img, r);
+  }
+
+  // Center-crop + resize to the exact output size and chosen format.
+  function finalize(img, r) {
+    return new Promise((resolve, reject) => {
+      const src = `data:${img.mime};base64,${img.data}`;
+      const fmt = $("fmt").value;
+      const el = new Image();
+      el.onerror = () => reject(new ApiError(0, "Image decode nahi hui"));
+      el.onload = () => {
+        let W = el.width, H = el.height;
+        if ($("exact").checked) { W = r.w; H = r.h; }
+        const c = document.createElement("canvas");
+        c.width = W; c.height = H;
+        const ctx = c.getContext("2d");
+        ctx.imageSmoothingQuality = "high";
+        const scale = Math.max(W / el.width, H / el.height);
+        const dw = el.width * scale, dh = el.height * scale;
+        if (fmt === "jpeg") { ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H); }
+        ctx.drawImage(el, (W - dw) / 2, (H - dh) / 2, dw, dh);
+        const mime = "image/" + fmt;
+        let url = c.toDataURL(mime, 0.92);
+        let ext = fmt === "jpeg" ? "jpg" : fmt;
+        if (!url.startsWith("data:" + mime)) { url = c.toDataURL("image/png"); ext = "png"; }
+        resolve({ url, ext, w: W, h: H });
+      };
+      el.src = src;
+    });
+  }
+
+  /* ---------- grid ---------- */
+  const ICONS = {
+    view: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>',
+    regen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v6h6M20 20v-6h-6"/><path d="M20 10a8 8 0 0 0-14.9-3M4 14a8 8 0 0 0 14.9 3"/></svg>',
+    dl: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>',
+    del: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>',
+    err: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>',
+  };
+
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function makeTile(item) {
+    const t = document.createElement("div");
+    t.className = "tile";
+    t.dataset.id = item.id;
+    t.innerHTML = `
+      <div class="media" style="aspect-ratio:${item.w}/${item.h}">
+        <span class="tc">${esc(item.tc)}</span>
+        <button class="pick" title="Select">${ICONS.check}</button>
+        <div class="slot"></div>
+        <div class="actions">
+          <button class="act" data-a="view" title="View">${ICONS.view}</button>
+          <button class="act" data-a="regen" title="Regenerate">${ICONS.regen}</button>
+          <button class="act" data-a="dl" title="Download">${ICONS.dl}</button>
+          <button class="act del" data-a="del" title="Remove">${ICONS.del}</button>
+        </div>
+      </div>
+      <div class="meta">
+        <div class="nm"><span class="fname"></span><span class="badge"></span></div>
+        <p class="ptxt"></p>
+      </div>`;
+    t.querySelector(".pick").onclick = (e) => { e.stopPropagation(); item.sel = !item.sel; updateTile(item); updateBulk(); };
+    t.querySelectorAll(".act").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); tileAction(item, b.dataset.a); }));
+    item.el = t;
+    updateTile(item);
+    return t;
+  }
+
+  function updateTile(item) {
+    const t = item.el;
+    if (!t) return;
+    t.classList.toggle("sel", !!item.sel);
+    t.querySelector(".media").style.aspectRatio = `${item.w}/${item.h}`;
+    t.querySelector(".fname").textContent = item.name + "." + (item.ext || "png");
+    const b = t.querySelector(".badge");
+    b.className = "badge " + item.status;
+    b.textContent = { queued: "Queued", running: "Creating", done: "Done", error: "Failed" }[item.status];
+    t.querySelector(".ptxt").textContent = item.prompt;
+    t.querySelector(".ptxt").title = item.prompt;
+    const slot = t.querySelector(".slot");
+    if (item.status === "done") {
+      if (!slot.querySelector("img") || slot.querySelector("img").src !== item.url) {
+        slot.innerHTML = `<img alt="">`;
+        const im = slot.querySelector("img");
+        im.src = item.url;
+        im.onclick = () => openViewer(item);
+      }
+    } else if (item.status === "running") {
+      slot.innerHTML = `<div class="shimmer"></div><div class="state"><div class="spinner"></div>Creating...</div>`;
+    } else if (item.status === "error") {
+      slot.innerHTML = `<div class="state err">${ICONS.err}<span>${esc(item.error || "Failed")}</span></div>`;
+    } else {
+      slot.innerHTML = `<div class="state">Queued</div>`;
+    }
+    const doneOnly = item.status === "done";
+    t.querySelector('[data-a="view"]').style.display = doneOnly ? "" : "none";
+    t.querySelector('[data-a="dl"]').style.display = doneOnly ? "" : "none";
+  }
+
+  function renderGrid() {
+    const g = $("grid");
+    g.innerHTML = "";
+    if (!state.items.length) {
+      g.appendChild(emptyEl);
+    } else {
+      state.items.forEach((it) => g.appendChild(it.el || makeTile(it)));
+    }
+    updateStats();
+    updateBulk();
+  }
+
+  function updateStats() {
+    const total = state.items.length;
+    const done = state.items.filter((i) => i.status === "done").length;
+    const fail = state.items.filter((i) => i.status === "error").length;
+    $("st-total").textContent = total;
+    $("st-done").textContent = done;
+    $("st-fail").textContent = fail;
+    $("progress").style.width = total ? ((done + fail) / total) * 100 + "%" : "0";
+    $("zipBtn").disabled = !done;
+    $("retryBtn").disabled = !fail || state.running;
+    $("subInfo").textContent = total ? `${done}/${total} ready` + (fail ? ` · ${fail} failed` : "") : "Paste prompts & hit generate";
+    $("st-dot").classList.toggle("busy", state.running);
+    $("st-text").textContent = state.running ? `Generating ${done + fail}/${total}` : "System Ready";
+  }
+
+  function updateBulk() {
+    const n = state.items.filter((i) => i.sel).length;
+    $("bulkBar").classList.toggle("hide", !n);
+    $("selCount").textContent = n + " selected";
+  }
+
+  /* ---------- queue ---------- */
+  async function runQueue() {
+    if (state.running) return;
+    state.running = true;
+    state.stop = false;
+    $("genBtn").disabled = true;
+    $("genText").textContent = "GENERATING...";
+    $("stopBtn").classList.remove("hide");
+    updateStats();
+
+    const conc = Number($("conc").value) || 1;
+    const worker = async () => {
+      while (!state.stop) {
+        const item = state.items.find((i) => i.status === "queued");
+        if (!item) return;
+        item.status = "running";
+        updateTile(item);
+        updateStats();
+        try {
+          const out = await generateImage(item);
+          if (!state.items.includes(item)) continue;
+          Object.assign(item, { status: "done", url: out.url, ext: out.ext, w: out.w, h: out.h, error: "" });
+        } catch (e) {
+          if (!state.items.includes(item)) continue;
+          if (state.stop) { item.status = "queued"; }
+          else { item.status = "error"; item.error = friendly(e); }
+        }
+        updateTile(item);
+        updateStats();
+      }
+    };
+    await Promise.all(Array.from({ length: conc }, worker));
+
+    const stopped = state.stop;
+    state.running = false;
+    state.stop = false;
+    $("genBtn").disabled = false;
+    $("genText").textContent = "GENERATE IMAGES";
+    $("stopBtn").classList.add("hide");
+    updateStats();
+    const done = state.items.filter((i) => i.status === "done").length;
+    const fail = state.items.filter((i) => i.status === "error").length;
+    if (stopped) toast("Generation stopped", "info");
+    else if (fail) toast(`${done} ready, ${fail} failed. "Retry Failed" dabayein.`, "bad");
+    else if (done) toast(`All ${done} images ready! ZIP download kar lein.`, "ok");
+  }
+
+  function friendly(e) {
+    const m = (e && e.message) || "Unknown error";
+    if (e.status === 429) return "Limit hit (429). Thori der baad Retry Failed dabayein.";
+    if (e.status === 401 || e.status === 403) return "Access nahi mila. Yeh tool Gemini Canvas ke andar chalayein.";
+    if (/safety|blocked/i.test(m)) return "Safety filter ne roka. Prompt thora badlein.";
+    return m.length > 140 ? m.slice(0, 140) + "…" : m;
+  }
+
+  function newItemsFromText() {
+    const r = currentRatio();
+    return parsePrompts($("prompts").value).map((p) => ({
+      id: ++uid, ...p, status: "queued", url: "", ext: $("fmt").value === "jpeg" ? "jpg" : $("fmt").value, w: r.w, h: r.h, sel: false,
+    }));
+  }
+
+  /* ---------- actions ---------- */
+  function tileAction(item, a) {
+    if (a === "view") openViewer(item);
+    else if (a === "dl") downloadOne(item);
+    else if (a === "del") {
+      state.items = state.items.filter((i) => i !== item);
+      item.el && item.el.remove();
+      if (!state.items.length) renderGrid(); else { updateStats(); updateBulk(); }
+    } else if (a === "regen") {
+      state.regenId = item.id;
+      $("regenTc").textContent = item.tc;
+      $("regenPrompt").value = item.prompt;
+      $("regenModal").classList.remove("hide");
+      setTimeout(() => $("regenPrompt").focus(), 50);
+    }
+  }
+
+  function requeue(items) {
+    const r = currentRatio();
+    items.forEach((it) => { it.status = "queued"; it.error = ""; it.w = r.w; it.h = r.h; updateTile(it); });
+    updateStats();
+    runQueue();
+  }
+
+  function downloadURL(url, name) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  const fileName = (it) => `${it.name}.${it.ext || "png"}`;
+  function downloadOne(item) { if (item.url) downloadURL(item.url, fileName(item)); }
+
+  async function downloadZip(items) {
+    const ready = items.filter((i) => i.status === "done" && i.url);
+    if (!ready.length) return toast("Koi image ready nahi", "bad");
+    if (typeof JSZip === "undefined") {
+      toast("ZIP library load nahi hui, ek ek karke download ho rahi hain", "info");
+      for (const it of ready) { downloadOne(it); await sleep(350); }
+      return;
+    }
+    toast("ZIP ban raha hai...", "info");
+    const zip = new JSZip();
+    ready.forEach((it) => zip.file(fileName(it), it.url.split(",")[1], { base64: true }));
+    const blob = await zip.generateAsync({ type: "blob" });
+    const d = new Date();
+    const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}`;
+    const url = URL.createObjectURL(blob);
+    downloadURL(url, `H-Labs_${stamp}.zip`);
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    toast(`${ready.length} images ZIP mein download ho gayi`, "ok");
+  }
+
+  /* ---------- viewer ---------- */
+  function doneItems() { return state.items.filter((i) => i.status === "done"); }
+  function openViewer(item) {
+    const list = doneItems();
+    state.viewIndex = list.indexOf(item);
+    if (state.viewIndex < 0) return;
+    showView();
+    $("viewModal").classList.remove("hide");
+  }
+  function showView() {
+    const list = doneItems();
+    const it = list[state.viewIndex];
+    if (!it) return closeViewer();
+    $("viewImg").src = it.url;
+    $("viewTc").textContent = it.tc;
+    $("viewTxt").textContent = it.prompt;
+    $("viewPrev").style.display = list.length > 1 ? "" : "none";
+    $("viewNext").style.display = list.length > 1 ? "" : "none";
+  }
+  function stepView(d) {
+    const n = doneItems().length;
+    if (!n) return;
+    state.viewIndex = (state.viewIndex + d + n) % n;
+    showView();
+  }
+  function closeViewer() { $("viewModal").classList.add("hide"); state.viewIndex = -1; }
+
+  /* ---------- wiring ---------- */
+  const emptyEl = $("empty");
+
+  $("genBtn").onclick = () => {
+    if (state.running) return;
+    const items = newItemsFromText();
+    if (!items.length) { toast("Pehle prompts paste karein", "bad"); $("prompts").focus(); return; }
+    state.items = items;
+    renderGrid();
+    runQueue();
+  };
+  $("stopBtn").onclick = () => { if (state.running) { state.stop = true; $("genText").textContent = "STOPPING..."; } };
+  $("zipBtn").onclick = () => downloadZip(state.items);
+  $("retryBtn").onclick = () => requeue(state.items.filter((i) => i.status === "error"));
+
+  $("selAll").onclick = () => { state.items.forEach((i) => { i.sel = true; updateTile(i); }); updateBulk(); };
+  $("selClear").onclick = () => { state.items.forEach((i) => { i.sel = false; updateTile(i); }); updateBulk(); };
+  $("selDl").onclick = () => downloadZip(state.items.filter((i) => i.sel));
+  $("selRegen").onclick = () => {
+    if (state.running) return toast("Pehle current generation khatam hone dein", "info");
+    const s = state.items.filter((i) => i.sel);
+    s.forEach((i) => (i.sel = false));
+    updateBulk();
+    requeue(s);
+  };
+  $("selDel").onclick = () => {
+    state.items.filter((i) => i.sel).forEach((i) => i.el && i.el.remove());
+    state.items = state.items.filter((i) => !i.sel);
+    if (!state.items.length) renderGrid(); else { updateStats(); updateBulk(); }
+  };
+
+  $("regenCancel").onclick = () => $("regenModal").classList.add("hide");
+  $("regenGo").onclick = () => {
+    const it = state.items.find((i) => i.id === state.regenId);
+    $("regenModal").classList.add("hide");
+    if (!it) return;
+    const p = $("regenPrompt").value.trim();
+    if (p) it.prompt = p;
+    if (state.running) { it.status = "queued"; it.error = ""; updateTile(it); updateStats(); toast("Queue mein add ho gaya", "info"); }
+    else requeue([it]);
+  };
+  $("regenModal").addEventListener("click", (e) => { if (e.target.id === "regenModal") $("regenModal").classList.add("hide"); });
+
+  $("viewClose").onclick = closeViewer;
+  $("viewPrev").onclick = () => stepView(-1);
+  $("viewNext").onclick = () => stepView(1);
+  $("viewDl").onclick = () => { const it = doneItems()[state.viewIndex]; if (it) downloadOne(it); };
+  $("viewModal").addEventListener("click", (e) => { if (e.target.id === "viewModal") closeViewer(); });
+  document.addEventListener("keydown", (e) => {
+    if (!$("viewModal").classList.contains("hide")) {
+      if (e.key === "Escape") closeViewer();
+      if (e.key === "ArrowLeft") stepView(-1);
+      if (e.key === "ArrowRight") stepView(1);
+    } else if (!$("regenModal").classList.contains("hide") && e.key === "Escape") {
+      $("regenModal").classList.add("hide");
+    }
+  });
+
+  // persist inputs
+  [["prompts", ""], ["ccDesc", ""], ["scDesc", ""], ["suffix", ""], ["fmt", "png"], ["engine", "auto"], ["conc", "2"], ["retries", "4"], ["mImagen", DEFAULT_IMAGEN], ["mGemini", DEFAULT_GEMINI]].forEach(([id, d]) => {
+    const el = $(id);
+    el.value = store.get(id, d);
+    el.addEventListener("input", () => store.set(id, el.value));
+    el.addEventListener("change", () => store.set(id, el.value));
+  });
+  ["noText", "exact"].forEach((id) => {
+    const el = $(id);
+    el.checked = store.get(id, true);
+    el.addEventListener("change", () => store.set(id, el.checked));
+  });
+  $("prompts").addEventListener("input", updateCount);
+
+  bindToggle("ccToggle", "ccBody");
+  bindToggle("scToggle", "scBody");
+  renderRatios();
+  renderStyles();
+  renderRefs("cc");
+  renderRefs("sc");
+  updateCount();
+  updateStats();
+})();
+</script>
+</body>
+</html>
