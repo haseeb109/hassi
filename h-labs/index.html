@@ -242,6 +242,26 @@ details.adv[open] summary::before{transform:rotate(45deg)}
 details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
 .opt-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--muted)}
 
+/* mode switch */
+.mode{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.mode button{padding:9px;border-radius:7px;font-weight:600;font-size:13px;color:var(--muted);transition:all .15s}
+.mode button:hover{color:var(--text)}
+.mode button.active{background:var(--accent);color:#000}
+.stack{display:flex;flex-direction:column;gap:12px}
+.req{font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:5px;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-line)}
+.toggle.locked{opacity:.6;pointer-events:none}
+.card.need{border-color:var(--red);box-shadow:0 0 0 1px var(--red)}
+.res{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+.res.warn{color:var(--accent)}
+
+/* pause bar */
+.pausebar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;margin-bottom:18px;border-radius:10px;background:var(--accent-soft);border:1px solid var(--accent-line)}
+.pb-l{display:flex;align-items:center;gap:12px}
+.pb-l b{display:block;font-size:13px;font-weight:600}
+.pb-l small{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.pb-ico{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--accent);color:#000;flex-shrink:0}
+.pb-ico svg{width:14px;height:14px}
+
 @media (max-width:900px){
   body{overflow:auto}
   .app{height:auto;min-height:100vh}
@@ -279,6 +299,11 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
   <div class="body">
     <aside class="glass">
 
+      <div class="mode" id="modeSwitch" role="tablist">
+        <button data-mode="story" class="active" role="tab">Storyboard</button>
+        <button data-mode="thumb" role="tab">Thumbnail</button>
+      </div>
+
       <!-- Format -->
       <section class="card">
         <div class="card-h">
@@ -286,6 +311,31 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
         </div>
         <div class="card-b">
           <div class="ratios" id="ratios"></div>
+          <div id="thumbOpts" class="stack hide">
+            <div class="row">
+              <div class="field">
+                <label class="lbl" for="tQuality">Quality</label>
+                <select id="tQuality" class="input">
+                  <option value="4K" selected>4K (Highest)</option>
+                  <option value="2K">2K</option>
+                  <option value="native">Native size</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="lbl" for="tVariants">Images per prompt</label>
+                <select id="tVariants" class="input">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4" selected>4</option>
+                </select>
+              </div>
+            </div>
+            <div class="opt-row">
+              <span>Upload-ready copy (small JPG)</span>
+              <label class="toggle"><input type="checkbox" id="ytCopy" checked><span class="tr"></span></label>
+            </div>
+          </div>
           <div class="row">
             <div class="field">
               <label class="lbl" for="fmt">File Type</label>
@@ -295,7 +345,7 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
                 <option value="webp">WEBP</option>
               </select>
             </div>
-            <div class="field">
+            <div class="field" id="engineField">
               <label class="lbl" for="engine">Engine</label>
               <select id="engine" class="input">
                 <option value="auto">Auto (best)</option>
@@ -308,10 +358,10 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
       </section>
 
       <!-- Character -->
-      <section class="card">
+      <section class="card" id="ccCard">
         <div class="card-h">
-          <div class="card-t"><span class="ico p"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>Character Match</div>
-          <label class="toggle"><input type="checkbox" id="ccToggle"><span class="tr"></span></label>
+          <div class="card-t"><span class="ico p"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>Character Match <span class="req hide" id="ccReq">Required</span></div>
+          <label class="toggle" id="ccToggleWrap"><input type="checkbox" id="ccToggle"><span class="tr"></span></label>
         </div>
         <div class="card-b collapsed" id="ccBody">
           <div class="field">
@@ -319,9 +369,9 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
             <textarea id="ccDesc" class="input" rows="3" placeholder="Ethan: 30 year old man, short black hair, light beard, blue denim jacket, white t-shirt..."></textarea>
           </div>
           <div class="field">
-            <label class="lbl">Reference Images <span style="text-transform:none;letter-spacing:0;color:var(--dim)">(optional, max 3)</span></label>
+            <label class="lbl">Reference Images <span style="color:var(--dim)" id="ccRefNote">(optional, max 3)</span></label>
             <div class="refs" id="ccRefs"></div>
-            <div class="hint">Reference image lagane se same face/outfit har image mein rehta hai (Nano Banana use hoga).</div>
+            <div class="hint" id="ccHint">Reference image lagane se same face/outfit har image mein rehta hai (Nano Banana use hoga).</div>
           </div>
         </div>
       </section>
@@ -348,7 +398,7 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
       <!-- Prompts -->
       <section class="card">
         <div class="card-h">
-          <div class="card-t"><span class="ico a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>Prompts List</div>
+          <div class="card-t"><span class="ico a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span><span id="promptsTitle">Prompts List</span></div>
           <span class="count-pill" id="promptCount">0 prompts</span>
         </div>
         <div class="card-b">
@@ -375,6 +425,19 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
                   </select>
                 </div>
               </div>
+              <div class="opt-row">
+                <span>Auto-pause on limit</span>
+                <label class="toggle"><input type="checkbox" id="autoPause" checked><span class="tr"></span></label>
+              </div>
+              <div class="field">
+                <label class="lbl" for="pauseMin">Wait before resuming</label>
+                <select id="pauseMin" class="input">
+                  <option value="1">1 minute</option>
+                  <option value="2" selected>2 minutes</option>
+                  <option value="5">5 minutes</option>
+                  <option value="10">10 minutes</option>
+                </select>
+              </div>
               <div class="field">
                 <label class="lbl" for="suffix">Add to every prompt</label>
                 <input id="suffix" class="input" placeholder="e.g. ultra detailed, 8k, cinematic lighting">
@@ -394,6 +457,10 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
               <div class="field">
                 <label class="lbl" for="mGemini">Nano Banana models (comma)</label>
                 <input id="mGemini" class="input" spellcheck="false">
+              </div>
+              <div class="field">
+                <label class="lbl" for="mThumb">Thumbnail models (comma)</label>
+                <input id="mThumb" class="input" spellcheck="false">
               </div>
             </div>
           </details>
@@ -431,6 +498,13 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
           <button class="btn sm stop" id="selDel">Remove</button>
           <button class="btn sm" id="selClear">✕</button>
         </div>
+      </div>
+      <div class="pausebar hide" id="pauseBar" role="status">
+        <div class="pb-l">
+          <span class="pb-ico"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></span>
+          <div><b>Limit reached. Paused</b><small id="pauseText">Auto-resume in 2:00</small></div>
+        </div>
+        <button class="btn sm" id="resumeNow">Resume now</button>
       </div>
       <div class="grid" id="grid">
         <div class="empty" id="empty">
@@ -483,6 +557,16 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
 
   const DEFAULT_IMAGEN = "imagen-4.0-generate-001, imagen-3.0-generate-002";
   const DEFAULT_GEMINI = "gemini-2.5-flash-image, gemini-2.5-flash-image-preview";
+  // Nano Banana Pro first (supports 2K/4K), then fall back to the standard models.
+  const DEFAULT_THUMB = "gemini-3-pro-image-preview, gemini-2.5-flash-image, gemini-2.5-flash-image-preview";
+
+  const THUMB_RATIOS = [
+    { id: "yt", label: "16:9", sub: "YouTube", ar: "16:9", k4: [3840, 2160], k2: [2560, 1440], up: [1280, 720] },
+    { id: "tt", label: "9:16", sub: "Shorts/TikTok", ar: "9:16", k4: [2160, 3840], k2: [1440, 2560], up: [1080, 1920] },
+  ];
+
+  const STORY_PH = "#0-00 Ethan sitting in a cozy cafe, morning light\n#0-15 Close up of a steaming coffee cup\n#0-30 Ethan walking on a rainy street at night\n\nHar line = 1 image. Timecode se file ka naam banega (0-00.png, 0-15.png...)";
+  const THUMB_PH = "Ethan shocked face, pointing at a giant pile of gold coins\nEthan holding a glowing smartphone, dark background, dramatic red light\n\nHar line = 1 thumbnail idea. Har idea ki kai images banengi, highest quality mein.";
 
   const RATIOS = [
     { id: "square",   label: "1:1",  sub: "Square",       ar: "1:1",  w: 1536, h: 1536 },
@@ -523,6 +607,12 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     viewIndex: -1,
     regenId: null,
     pickTarget: null,
+    mode: "story",
+    thumbRatio: store.get("thumbRatio", "yt"),
+    pausedUntil: 0,
+    pauseLevel: 0,
+    ccPrev: undefined,
+    texts: { story: store.get("prompts", ""), thumb: store.get("promptsThumb", "") },
   };
   let uid = 0;
 
@@ -540,19 +630,37 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
   /* ---------- ratios ---------- */
   function renderRatios() {
     const box = $("ratios");
+    const thumb = state.mode === "thumb";
+    const list = thumb ? THUMB_RATIOS : RATIOS;
+    const activeId = thumb ? state.thumbRatio : state.ratio;
+    box.style.gridTemplateColumns = thumb ? "repeat(2,1fr)" : "";
     box.innerHTML = "";
-    RATIOS.forEach((r) => {
+    list.forEach((r) => {
       const [a, b] = r.ar.split(":").map(Number);
       const scale = 26 / Math.max(a, b);
       const el = document.createElement("button");
-      el.className = "ratio" + (state.ratio === r.id ? " active" : "");
+      el.className = "ratio" + (activeId === r.id ? " active" : "");
       el.innerHTML = `<div class="shape" style="width:${a * scale}px;height:${b * scale}px"></div><span>${r.label}</span><small>${r.sub}</small>`;
-      el.title = `${r.w} × ${r.h}`;
-      el.onclick = () => { state.ratio = r.id; store.set("ratio", r.id); renderRatios(); };
+      const dims = thumb ? ($("tQuality").value === "2K" ? r.k2 : r.k4) : [r.w, r.h];
+      el.title = `${dims[0]} × ${dims[1]}`;
+      el.onclick = () => {
+        if (thumb) { state.thumbRatio = r.id; store.set("thumbRatio", r.id); }
+        else { state.ratio = r.id; store.set("ratio", r.id); }
+        renderRatios();
+      };
       box.appendChild(el);
     });
   }
-  const currentRatio = () => RATIOS.find((r) => r.id === state.ratio) || RATIOS[2];
+
+  function currentRatio() {
+    if (state.mode === "thumb") {
+      const t = THUMB_RATIOS.find((r) => r.id === state.thumbRatio) || THUMB_RATIOS[0];
+      const q = $("tQuality").value;
+      const [w, h] = q === "2K" ? t.k2 : t.k4;
+      return { ...t, w, h, native: q === "native", size: q === "2K" ? "2K" : "4K" };
+    }
+    return RATIOS.find((r) => r.id === state.ratio) || RATIOS[2];
+  }
 
   /* ---------- styles ---------- */
   function renderStyles() {
@@ -589,6 +697,7 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
       d.querySelector("button").onclick = () => { list.splice(i, 1); renderRefs(kind); };
       box.appendChild(d);
     });
+    if (kind === "cc" && list.length) $("ccCard").classList.remove("need");
     if (list.length < max) {
       const add = document.createElement("div");
       add.className = "ref-add";
@@ -650,7 +759,12 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
 
   function updateCount() {
     const n = parsePrompts($("prompts").value).length;
-    $("promptCount").textContent = n + (n === 1 ? " prompt" : " prompts");
+    if (state.mode === "thumb") {
+      const v = Number($("tVariants").value) || 1;
+      $("promptCount").textContent = `${n} idea${n === 1 ? "" : "s"} · ${n * v} images`;
+    } else {
+      $("promptCount").textContent = n + (n === 1 ? " prompt" : " prompts");
+    }
   }
 
   /* ---------- prompt building ---------- */
@@ -671,6 +785,10 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     }
     const sfx = $("suffix").value.trim();
     if (sfx) parts.push(sfx);
+    if (state.mode === "thumb") {
+      parts.unshift("High-end YouTube thumbnail image. Ultra sharp, extremely detailed, professional photo quality, high contrast, vivid colors, dramatic lighting, one clear focal point, expressive face, clean uncluttered background.");
+      if (item.vTotal > 1) parts.push(`Variation ${item.v} of ${item.vTotal}: use a clearly different camera angle, pose and composition from the other variations.`);
+    }
     const orient = r.ar === "1:1" ? "square" : (r.w > r.h ? "horizontal landscape" : "vertical portrait");
     parts.push(`Composition: ${orient} ${r.ar} frame.`);
     if ($("noText").checked) parts.push("No text, no letters, no captions, no watermark, no logo.");
@@ -703,6 +821,7 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
       if (state.stop) throw new ApiError(0, "Stopped");
       try { return await fn(); }
       catch (e) {
+        if (e.status === 429 && $("autoPause").checked) throw e; // auto-pause handles limits
         const retryable = e.status === 429 || e.status >= 500 || e.status === undefined || e instanceof TypeError;
         if (!retryable || a >= tries) throw e;
         await sleep(wait + Math.random() * 800);
@@ -721,19 +840,26 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     return { mime: p.mimeType || "image/png", data: p.bytesBase64Encoded };
   }
 
-  async function gemini(model, prompt, ar, refs) {
+  const cfgOk = {};
+  async function gemini(model, prompt, ar, refs, imageSize) {
     const parts = [{ text: `Generate an image. ${prompt}` }];
     refs.forEach((r) => parts.push({ inlineData: { mimeType: r.mime, data: r.data } }));
-    const base = { contents: [{ parts }], generationConfig: { responseModalities: ["TEXT", "IMAGE"] } };
-    const withCfg = JSON.parse(JSON.stringify(base));
-    withCfg.generationConfig.imageConfig = { aspectRatio: ar };
-    let json;
-    try { json = await postJSON(`${API}${model}:generateContent?key=${apiKey}`, withCfg); }
-    catch (e) {
-      // older models may not know imageConfig; try once without it
-      if (e.status === 400) json = await postJSON(`${API}${model}:generateContent?key=${apiKey}`, base);
-      else throw e;
+    const url = `${API}${model}:generateContent?key=${apiKey}`;
+    // Ask for the biggest size first; older models reject imageSize/imageConfig with a 400, so step down.
+    const cfgs = [];
+    if (imageSize === "4K") cfgs.push({ aspectRatio: ar, imageSize: "4K" });
+    if (imageSize) cfgs.push({ aspectRatio: ar, imageSize: "2K" });
+    cfgs.push({ aspectRatio: ar }, null);
+    // Remember which setting worked for this model so later images skip the rejected ones.
+    const key = model + "|" + (imageSize || "");
+    let json, lastErr;
+    for (let i = cfgOk[key] || 0; i < cfgs.length; i++) {
+      const body = { contents: [{ parts }], generationConfig: { responseModalities: ["TEXT", "IMAGE"] } };
+      if (cfgs[i]) body.generationConfig.imageConfig = cfgs[i];
+      try { json = await postJSON(url, body); cfgOk[key] = i; break; }
+      catch (e) { lastErr = e; if (e.status !== 400) throw e; }
     }
+    if (!json) throw lastErr;
     const cand = json && json.candidates && json.candidates[0];
     const out = cand && cand.content && cand.content.parts && cand.content.parts.find((p) => p.inlineData && p.inlineData.data);
     if (!out) throw new ApiError(422, "Image nahi bani (safety filter ya khali jawab). Prompt badal kar dobara try karein.");
@@ -761,6 +887,11 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
   async function generateImage(item) {
     const r = currentRatio();
     const prompt = buildPrompt(item);
+    if (state.mode === "thumb") {
+      const refs = [...state.ccRefs, ...($("scToggle").checked ? state.scRefs : [])];
+      const img = await tryModels(modelList("mThumb", DEFAULT_THUMB), (m) => gemini(m, prompt, r.ar, refs, r.size));
+      return finalize(img, r);
+    }
     const refs = [
       ...($("ccToggle").checked ? state.ccRefs : []),
       ...($("scToggle").checked ? state.scRefs : []),
@@ -790,8 +921,10 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
       const el = new Image();
       el.onerror = () => reject(new ApiError(0, "Image decode nahi hui"));
       el.onload = () => {
-        let W = el.width, H = el.height;
-        if ($("exact").checked) { W = r.w; H = r.h; }
+        const nw = el.width, nh = el.height;
+        const resize = state.mode === "thumb" ? !r.native : $("exact").checked;
+        let W = nw, H = nh;
+        if (resize) { W = r.w; H = r.h; }
         const c = document.createElement("canvas");
         c.width = W; c.height = H;
         const ctx = c.getContext("2d");
@@ -804,10 +937,25 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
         let url = c.toDataURL(mime, 0.92);
         let ext = fmt === "jpeg" ? "jpg" : fmt;
         if (!url.startsWith("data:" + mime)) { url = c.toDataURL("image/png"); ext = "png"; }
-        resolve({ url, ext, w: W, h: H });
+        const up = state.mode === "thumb" && $("ytCopy").checked ? uploadCopy(el, r.up[0], r.up[1]) : "";
+        resolve({ url, ext, w: W, h: H, nw, nh, up });
       };
       el.src = src;
     });
+  }
+
+  // Small JPG copy for uploading (YouTube rejects big thumbnail files).
+  function uploadCopy(el, W, H) {
+    const c = document.createElement("canvas");
+    c.width = W; c.height = H;
+    const ctx = c.getContext("2d");
+    ctx.imageSmoothingQuality = "high";
+    const scale = Math.max(W / el.width, H / el.height);
+    const dw = el.width * scale, dh = el.height * scale;
+    ctx.drawImage(el, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    let q = 0.95, url = c.toDataURL("image/jpeg", q);
+    while (url.length * 0.75 > 1.9 * 1024 * 1024 && q > 0.5) { q -= 0.08; url = c.toDataURL("image/jpeg", q); }
+    return url;
   }
 
   /* ---------- grid ---------- */
@@ -841,6 +989,7 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
       <div class="meta">
         <div class="nm"><span class="fname"></span><span class="badge"></span></div>
         <p class="ptxt"></p>
+        <div class="res"></div>
       </div>`;
     t.querySelector(".pick").onclick = (e) => { e.stopPropagation(); item.sel = !item.sel; updateTile(item); updateBulk(); };
     t.querySelectorAll(".act").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); tileAction(item, b.dataset.a); }));
@@ -860,6 +1009,14 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     b.textContent = { queued: "Queued", running: "Creating", done: "Done", error: "Failed" }[item.status];
     t.querySelector(".ptxt").textContent = item.prompt;
     t.querySelector(".ptxt").title = item.prompt;
+    const res = t.querySelector(".res");
+    if (item.status === "done" && item.nw) {
+      const upscaled = item.w > item.nw * 1.05 || item.h > item.nh * 1.05;
+      res.textContent = upscaled ? `${item.w}×${item.h} · upscaled from ${item.nw}×${item.nh}` : `${item.w}×${item.h}`;
+      res.classList.toggle("warn", upscaled);
+    } else {
+      res.textContent = "";
+    }
     const slot = t.querySelector(".slot");
     if (item.status === "done") {
       if (!slot.querySelector("img") || slot.querySelector("img").src !== item.url) {
@@ -904,7 +1061,7 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     $("retryBtn").disabled = !fail || state.running;
     $("subInfo").textContent = total ? `${done}/${total} ready` + (fail ? ` · ${fail} failed` : "") : "Paste prompts & hit generate";
     $("st-dot").classList.toggle("busy", state.running);
-    $("st-text").textContent = state.running ? `Generating ${done + fail}/${total}` : "System Ready";
+    $("st-text").textContent = isPaused() ? "Paused (limit)" : state.running ? `Generating ${done + fail}/${total}` : "System Ready";
   }
 
   function updateBulk() {
@@ -926,6 +1083,8 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     const conc = Number($("conc").value) || 1;
     const worker = async () => {
       while (!state.stop) {
+        await waitWhilePaused();
+        if (state.stop) return;
         const item = state.items.find((i) => i.status === "queued");
         if (!item) return;
         item.status = "running";
@@ -934,10 +1093,12 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
         try {
           const out = await generateImage(item);
           if (!state.items.includes(item)) continue;
-          Object.assign(item, { status: "done", url: out.url, ext: out.ext, w: out.w, h: out.h, error: "" });
+          Object.assign(item, { status: "done", url: out.url, ext: out.ext, w: out.w, h: out.h, nw: out.nw, nh: out.nh, up: out.up, error: "" });
+          state.pauseLevel = 0;
         } catch (e) {
           if (!state.items.includes(item)) continue;
           if (state.stop) { item.status = "queued"; }
+          else if (e.status === 429 && $("autoPause").checked) { item.status = "queued"; startPause(); }
           else { item.status = "error"; item.error = friendly(e); }
         }
         updateTile(item);
@@ -947,10 +1108,11 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     await Promise.all(Array.from({ length: conc }, worker));
 
     const stopped = state.stop;
+    endPause();
     state.running = false;
     state.stop = false;
     $("genBtn").disabled = false;
-    $("genText").textContent = "Generate Images";
+    $("genText").textContent = genLabel();
     $("stopBtn").classList.add("hide");
     updateStats();
     const done = state.items.filter((i) => i.status === "done").length;
@@ -959,6 +1121,37 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     else if (fail) toast(`${done} ready, ${fail} failed. "Retry Failed" dabayein.`, "bad");
     else if (done) toast(`All ${done} images ready! ZIP download kar lein.`, "ok");
   }
+
+  /* ---------- auto-pause ---------- */
+  let pauseTimer = null;
+  const isPaused = () => state.pausedUntil > Date.now();
+  function startPause() {
+    if (isPaused()) return;
+    const base = (Number($("pauseMin").value) || 2) * 60000;
+    const ms = Math.min(base * Math.pow(2, state.pauseLevel), 15 * 60000); // waits longer each time, max 15 min
+    state.pauseLevel++;
+    state.pausedUntil = Date.now() + ms;
+    $("pauseBar").classList.remove("hide");
+    clearInterval(pauseTimer);
+    pauseTimer = setInterval(tickPause, 1000);
+    tickPause();
+    toast("Limit aa gayi. Tool khud dobara shuru hoga.", "info");
+  }
+  function tickPause() {
+    const left = state.pausedUntil - Date.now();
+    if (left <= 0) return endPause();
+    const sec = Math.ceil(left / 1000);
+    $("pauseText").textContent = `Auto-resume in ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+    updateStats();
+  }
+  function endPause() {
+    state.pausedUntil = 0;
+    clearInterval(pauseTimer);
+    pauseTimer = null;
+    $("pauseBar").classList.add("hide");
+    updateStats();
+  }
+  async function waitWhilePaused() { while (isPaused() && !state.stop) await sleep(400); }
 
   function friendly(e) {
     const m = (e && e.message) || "Unknown error";
@@ -970,7 +1163,20 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
 
   function newItemsFromText() {
     const r = currentRatio();
-    return parsePrompts($("prompts").value).map((p) => ({
+    const ext = $("fmt").value === "jpeg" ? "jpg" : $("fmt").value;
+    const parsed = parsePrompts($("prompts").value);
+    if (state.mode === "thumb") {
+      const V = Number($("tVariants").value) || 1;
+      const out = [];
+      parsed.forEach((p, i) => {
+        const n = String(i + 1).padStart(2, "0");
+        for (let v = 1; v <= V; v++) {
+          out.push({ id: ++uid, tc: `T${n} · V${v}`, name: `thumb_${n}_v${v}`, prompt: p.prompt, v, vTotal: V, status: "queued", url: "", ext, w: r.w, h: r.h, sel: false });
+        }
+      });
+      return out;
+    }
+    return parsed.map((p) => ({
       id: ++uid, ...p, status: "queued", url: "", ext: $("fmt").value === "jpeg" ? "jpg" : $("fmt").value, w: r.w, h: r.h, sel: false,
     }));
   }
@@ -1008,7 +1214,11 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     a.remove();
   }
   const fileName = (it) => `${it.name}.${it.ext || "png"}`;
-  function downloadOne(item) { if (item.url) downloadURL(item.url, fileName(item)); }
+  function downloadOne(item) {
+    if (!item.url) return;
+    downloadURL(item.url, fileName(item));
+    if (item.up) setTimeout(() => downloadURL(item.up, `${item.name}_upload.jpg`), 400);
+  }
 
   async function downloadZip(items) {
     const ready = items.filter((i) => i.status === "done" && i.url);
@@ -1020,7 +1230,10 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     }
     toast("ZIP ban raha hai...", "info");
     const zip = new JSZip();
-    ready.forEach((it) => zip.file(fileName(it), it.url.split(",")[1], { base64: true }));
+    ready.forEach((it) => {
+      zip.file(fileName(it), it.url.split(",")[1], { base64: true });
+      if (it.up) zip.file(`upload_ready/${it.name}_upload.jpg`, it.up.split(",")[1], { base64: true });
+    });
     const blob = await zip.generateAsync({ type: "blob" });
     const d = new Date();
     const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}`;
@@ -1064,11 +1277,18 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     if (state.running) return;
     const items = newItemsFromText();
     if (!items.length) { toast("Pehle prompts paste karein", "bad"); $("prompts").focus(); return; }
+    if (state.mode === "thumb" && !state.ccRefs.length) {
+      toast("Thumbnail mode mein character ki reference photo lazmi hai", "bad");
+      $("ccCard").classList.add("need");
+      $("ccCard").scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     state.items = items;
     renderGrid();
     runQueue();
   };
-  $("stopBtn").onclick = () => { if (state.running) { state.stop = true; $("genText").textContent = "Stopping…"; } };
+  $("resumeNow").onclick = () => endPause();
+  $("stopBtn").onclick = () => { if (state.running) { state.stop = true; endPause(); $("genText").textContent = "Stopping…"; } };
   $("zipBtn").onclick = () => downloadZip(state.items);
   $("retryBtn").onclick = () => requeue(state.items.filter((i) => i.status === "error"));
 
@@ -1116,22 +1336,59 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
   });
 
   // persist inputs
-  [["prompts", ""], ["ccDesc", ""], ["scDesc", ""], ["suffix", ""], ["fmt", "png"], ["engine", "auto"], ["conc", "2"], ["retries", "4"], ["mImagen", DEFAULT_IMAGEN], ["mGemini", DEFAULT_GEMINI]].forEach(([id, d]) => {
+  [["ccDesc", ""], ["scDesc", ""], ["suffix", ""], ["fmt", "png"], ["engine", "auto"], ["conc", "2"], ["retries", "4"], ["mImagen", DEFAULT_IMAGEN], ["mGemini", DEFAULT_GEMINI], ["mThumb", DEFAULT_THUMB], ["tQuality", "4K"], ["tVariants", "4"], ["pauseMin", "2"]].forEach(([id, d]) => {
     const el = $(id);
     el.value = store.get(id, d);
     el.addEventListener("input", () => store.set(id, el.value));
     el.addEventListener("change", () => store.set(id, el.value));
   });
-  ["noText", "exact"].forEach((id) => {
+  ["noText", "exact", "autoPause", "ytCopy"].forEach((id) => {
     const el = $(id);
     el.checked = store.get(id, true);
     el.addEventListener("change", () => store.set(id, el.checked));
   });
-  $("prompts").addEventListener("input", updateCount);
+  $("prompts").addEventListener("input", () => {
+    state.texts[state.mode] = $("prompts").value;
+    store.set(state.mode === "thumb" ? "promptsThumb" : "prompts", $("prompts").value);
+    updateCount();
+  });
+  $("tVariants").addEventListener("change", updateCount);
+  $("tQuality").addEventListener("change", renderRatios);
+
+  /* ---------- mode switch ---------- */
+  const genLabel = () => (state.mode === "thumb" ? "Generate Thumbnails" : "Generate Images");
+  function setMode(mode, first) {
+    if (state.running) return toast("Generation chal rahi hai, pehle khatam hone dein", "info");
+    if (!first) state.texts[state.mode] = $("prompts").value;
+    state.mode = mode;
+    store.set("mode", mode);
+    const thumb = mode === "thumb";
+    document.querySelectorAll("#modeSwitch button").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
+    $("thumbOpts").classList.toggle("hide", !thumb);
+    $("engineField").classList.toggle("hide", thumb);
+    $("ccReq").classList.toggle("hide", !thumb);
+    $("ccToggleWrap").classList.toggle("locked", thumb);
+    const cc = $("ccToggle");
+    if (thumb) { if (state.ccPrev === undefined) state.ccPrev = cc.checked; cc.checked = true; }
+    else if (state.ccPrev !== undefined) { cc.checked = state.ccPrev; state.ccPrev = undefined; }
+    cc.dispatchEvent(new Event("change"));
+    if (!thumb) $("ccCard").classList.remove("need");
+    $("ccRefNote").textContent = thumb ? "(required, max 3)" : "(optional, max 3)";
+    $("ccHint").textContent = thumb
+      ? "Kam az kam 1 saaf chehre wali photo lazmi hai. Isi chehre ko lock karke saare thumbnails banenge."
+      : "Reference image lagane se same face/outfit har image mein rehta hai (Nano Banana use hoga).";
+    $("promptsTitle").textContent = thumb ? "Thumbnail Ideas" : "Prompts List";
+    $("prompts").placeholder = thumb ? THUMB_PH : STORY_PH;
+    $("prompts").value = state.texts[mode] || "";
+    $("genText").textContent = genLabel();
+    renderRatios();
+    updateCount();
+  }
+  document.querySelectorAll("#modeSwitch button").forEach((b) => (b.onclick = () => { if (b.dataset.mode !== state.mode) setMode(b.dataset.mode); }));
 
   bindToggle("ccToggle", "ccBody");
   bindToggle("scToggle", "scBody");
-  renderRatios();
+  setMode(store.get("mode", "story"), true);
   renderStyles();
   renderRefs("cc");
   renderRefs("sc");

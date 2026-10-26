@@ -33,7 +33,21 @@ In se `0-00.png`, `0-15.png` aur `0-30.png` banengi. Jis line mein timecode na h
 - Har image par View, Regenerate (prompt badal kar), Download aur Remove
 - Kai images select karke ek saath download, regenerate ya remove
 - **Download ZIP**: saari images timecode naam ke saath
-- Aap ki settings aur prompts browser mein yaad rehte hain
+
+## Thumbnail mode
+
+Sidebar ke upar **Thumbnail** par click karein.
+
+- **Character lock lazmi hai:** kam az kam 1 saaf chehre wali photo daalein. Saare thumbnails usi chehre se banenge.
+- **Images per prompt:** har idea ki 1 se 4 images (default 4), taake aap best wali chun sakein.
+- **Quality:** 4K (3840×2160), 2K (2560×1440) ya Native. Tool pehle Nano Banana Pro se 4K maangta hai. Woh na mile to 2K, aur phir standard model.
+- Har card par likha hota hai ke image asal mein kis size mein bani. Agar "upscaled from…" likha ho to model ne chhoti image di thi aur tool ne usay bada kiya hai.
+- **Upload-ready copy:** har thumbnail ki ek chhoti JPG (1280×720 ya 1080×1920) ZIP ke `upload_ready` folder mein, YouTube par seedha upload ke liye.
+- 16:9 (YouTube) aur 9:16 (Shorts/TikTok cover) dono.
+
+## Auto-pause
+
+Limit (429) aate hi tool ruk jata hai, upar countdown dikhata hai aur waqt poora hone par khud dobara shuru ho jata hai. Har baar intezaar thora lamba hota hai, zyada se zyada 15 minute. **Resume now** se foran shuru kar sakte hain. Settings **Advanced** mein hain.
 
 ## Agar image na bane
 
