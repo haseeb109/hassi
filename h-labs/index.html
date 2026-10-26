@@ -307,6 +307,21 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
 .badge.checking{background:#1c1c1c;color:var(--muted)}
 .cap .warnline{color:#ffb27a}
 
+.pausebar.advise{background:rgba(248,113,113,.08);border-color:rgba(248,113,113,.45)}
+.pausebar.advise .pb-ico{background:var(--red);color:#000;font-weight:800;font-size:15px}
+.adv-btns{display:flex;gap:8px;flex-shrink:0}
+
+/* speed sliders */
+.slider-h{display:flex;align-items:center;justify-content:space-between}
+.slider-h b{font-size:12.5px;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums}
+.range{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:999px;background:#2a2a2a;outline:none;margin:8px 0 4px;cursor:pointer}
+.range::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer}
+.range::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer}
+.range:focus-visible{box-shadow:0 0 0 3px var(--accent-soft)}
+.pp-foot{margin-top:12px;font-size:12px;color:var(--dim);line-height:1.5}
+.pp-foot b{color:var(--muted);font-weight:600}
+.pp-foot .lim{color:#ffb27a}
+
 /* pause bar */
 .pausebar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;margin-bottom:18px;border-radius:10px;background:var(--accent-soft);border:1px solid var(--accent-line)}
 .pb-l{display:flex;align-items:center;gap:12px}
@@ -410,6 +425,26 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
         </div>
       </section>
 
+      <!-- Speed -->
+      <section class="card">
+        <div class="card-h">
+          <div class="card-t"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg></span>Generation Speed</div>
+          <span class="count-pill" id="speedPill">Normal</span>
+        </div>
+        <div class="card-b">
+          <div class="chips" id="speedChips"></div>
+          <div class="field">
+            <div class="slider-h"><label class="lbl" for="conc">Images at the same time</label><b id="concVal">2</b></div>
+            <input type="range" id="conc" class="range" min="1" max="8" step="1" value="2">
+          </div>
+          <div class="field">
+            <div class="slider-h"><label class="lbl" for="gap">Gap between images</label><b id="gapVal">2s</b></div>
+            <input type="range" id="gap" class="range" min="0" max="15" step="0.5" value="2">
+          </div>
+          <div class="hint" id="speedHint">Speed chalte waqt bhi badal sakte hain. Limit jaldi aaye to speed kam karein.</div>
+        </div>
+      </section>
+
       <!-- Character -->
       <section class="card" id="ccCard">
         <div class="card-h">
@@ -489,15 +524,6 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
             <summary>Advanced settings</summary>
             <div class="inner">
               <div class="row">
-                <div class="field">
-                  <label class="lbl" for="conc">Parallel</label>
-                  <select id="conc" class="input">
-                    <option value="1">1 at a time</option>
-                    <option value="2" selected>2 at a time</option>
-                    <option value="3">3 at a time</option>
-                    <option value="4">4 at a time</option>
-                  </select>
-                </div>
                 <div class="field">
                   <label class="lbl" for="retries">Auto Retry</label>
                   <select id="retries" class="input">
@@ -590,6 +616,7 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
           <div class="ps flag"><small>Flagged</small><b id="psFlag">0</b></div>
           <div class="ps err"><small>Failed</small><b id="psErr">0</b></div>
         </div>
+        <div class="pp-foot" id="ppFoot"></div>
       </section>
       <div class="toolbar">
         <div class="filters" id="filters">
@@ -631,6 +658,16 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
           <div><b>Limit reached. Paused</b><small id="pauseText">Auto-resume in 2:00</small></div>
         </div>
         <button class="btn sm" id="resumeNow">Resume now</button>
+      </div>
+      <div class="pausebar advise hide" id="adviseBar" role="alert">
+        <div class="pb-l">
+          <span class="pb-ico">!</span>
+          <div><b id="adviseTitle">Speed zyada hai, kam karein</b><small id="adviseText"></small></div>
+        </div>
+        <div class="adv-btns">
+          <button class="btn sm primary" id="adviseApply">Apply</button>
+          <button class="btn sm" id="adviseClose">Dismiss</button>
+        </div>
       </div>
       <div class="grid" id="grid">
         <div class="empty" id="empty">
@@ -685,6 +722,14 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
   const DEFAULT_GEMINI = "gemini-2.5-flash-image, gemini-2.5-flash-image-preview";
   // Nano Banana Pro first (supports 2K/4K), then fall back to the standard models.
   const DEFAULT_THUMB = "gemini-3-pro-image-preview, gemini-2.5-flash-image, gemini-2.5-flash-image-preview";
+
+  // name, images at the same time, seconds between image starts
+  const SPEEDS = [
+    ["Safe", 1, 6],
+    ["Normal", 2, 2],
+    ["Fast", 4, 0.5],
+    ["Turbo", 6, 0],
+  ];
 
   const DEFAULT_QA = "gemini-2.5-flash, gemini-2.5-flash-preview-05-20, gemini-2.0-flash";
 
@@ -745,6 +790,13 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     runStart: 0,
     runDone: 0,
     lastSpeed: "–",
+    speed: store.get("speed", "Normal"),
+    slots: new Set(),
+    nextStart: 0,
+    session: { images: 0, requests: 0, limitAt: null, limitSpeed: "", limitHits: 0 },
+    recent: [],
+    advice: null,
+    adviceMuteUntil: 0,
   };
   let uid = 0;
 
@@ -936,6 +988,7 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
   }
 
   async function postJSON(url, body) {
+    state.session.requests++;
     const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     let json = null;
     try { json = await res.json(); } catch (e) {}
@@ -1034,13 +1087,19 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     const runGemini = () => tryModels(modelList("mGemini", DEFAULT_GEMINI), (m) => gemini(m, prompt, r.ar, refs));
     const runImagen = () => tryModels(modelList("mImagen", DEFAULT_IMAGEN), (m) => imagen(m, prompt, r.ar));
 
+    // Try the other engine as a backup. If the first one hit a limit (429) and the backup
+    // also fails, report the limit so auto-pause can wait and retry.
+    const backup = async (first, e) => {
+      try { return await first(); }
+      catch (e2) { throw (e.status === 429 && e2.status !== 429) || e2.status === 404 || e2.status === 403 ? e : e2; }
+    };
     let img;
     if (engine === "imagen") {
       try { img = await runImagen(); }
-      catch (e) { if (state.stop || e.status === 422) throw e; img = await runGemini(); }
+      catch (e) { if (state.stop || e.status === 422) throw e; img = await backup(runGemini, e); }
     } else {
       try { img = await runGemini(); }
-      catch (e) { if (state.stop || refs.length || e.status === 422) throw e; img = await runImagen(); }
+      catch (e) { if (state.stop || refs.length || e.status === 422) throw e; img = await backup(runImagen, e); }
     }
     return finalize(img, r);
   }
@@ -1319,6 +1378,10 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     $("psCheck").textContent = c.check;
     $("psFlag").textContent = c.flag;
     $("psErr").textContent = c.err;
+    const ss = state.session;
+    let foot = `Is session mein: <b>${ss.images}</b> images · <b>${ss.requests}</b> requests (checks aur retries samet)`;
+    if (ss.limitAt !== null) foot += ` · <span class="lim">Pehli limit <b>${ss.limitAt}</b> images ke baad aayi (${esc(ss.limitSpeed)}) · Limit ${ss.limitHits} baar aayi</span>`;
+    $("ppFoot").innerHTML = foot;
     $("fAll").textContent = c.total;
     $("fDone").textContent = c.ok + c.check;
     $("fFlag").textContent = c.flag;
@@ -1363,11 +1426,12 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     const ticker = setInterval(updateStats, 1000);
     updateStats();
 
-    const conc = Number($("conc").value) || 1;
-    const worker = async () => {
+    const worker = async (slot) => {
       while (!state.stop) {
+        if (slot >= wantWorkers()) return; // speed was lowered: this worker steps out
         await waitWhilePaused();
-        if (state.stop) return;
+        await waitGap();
+        if (state.stop || slot >= wantWorkers()) return;
         const item = state.items.find((i) => i.status === "queued");
         if (!item) return;
         item.status = "running";
@@ -1379,6 +1443,8 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
           Object.assign(item, { status: "done", url: out.url, ext: out.ext, w: out.w, h: out.h, nw: out.nw, nh: out.nh, up: out.up, error: "", retryNote: "" });
           state.pauseLevel = 0;
           state.runDone++;
+          state.session.images++;
+          noteOutcome("ok");
           if ($("qaToggle").checked) {
             item.qa = { state: "checking", score: 0, issues: [] };
             updateTile(item);
@@ -1400,15 +1466,38 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
         } catch (e) {
           if (!state.items.includes(item)) continue;
           if (state.stop) { item.status = "queued"; }
-          else if (e.status === 429 && $("autoPause").checked) { item.status = "queued"; startPause(); }
+          else if (e.status === 429 && $("autoPause").checked) { item.status = "queued"; noteOutcome("limit"); startPause(); }
           else if (item.prev) { Object.assign(item, item.prev, { status: "done", retryNote: "" }); item.prev = null; } // retry failed: keep old image
-          else { item.status = "error"; item.error = friendly(e); }
+          else {
+            item.status = "error";
+            item.error = friendly(e);
+            if (e.status !== 422) noteOutcome(e.status === 429 ? "limit" : "fail"); // safety blocks are not speed related
+          }
         }
         updateTile(item);
         updateStats();
       }
     };
-    await Promise.all(Array.from({ length: conc }, worker));
+    await new Promise((resolve) => {
+      spawnWorkers = () => {
+        if (!state.running) return;
+        const want = wantWorkers();
+        for (let i = 0; i < want; i++) {
+          if (state.slots.has(i)) continue;
+          state.slots.add(i);
+          worker(i).catch(() => {}).finally(() => {
+            state.slots.delete(i);
+            // a lowered speed can leave queued items with no worker; restart if needed
+            if (!state.slots.size) {
+              if (!state.stop && state.items.some((x) => x.status === "queued")) spawnWorkers();
+              else resolve();
+            }
+          });
+        }
+      };
+      spawnWorkers();
+    });
+    spawnWorkers = () => {};
 
     const stopped = state.stop;
     clearInterval(ticker);
@@ -1425,6 +1514,94 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     else if (c.done) toast(`All ${c.done} images ready! ZIP download kar lein.`, "ok");
   }
 
+  /* ---------- speed ---------- */
+  let spawnWorkers = () => {};
+  const wantWorkers = () => Math.max(1, Number($("conc").value) || 1);
+  const speedLabel = () => `${state.speed}: ${$("conc").value} at a time, ${$("gap").value}s gap`;
+
+  // Spaces out image starts across all workers by the chosen gap.
+  async function waitGap() {
+    const gap = (Number($("gap").value) || 0) * 1000;
+    const now = Date.now();
+    const at = Math.max(now, state.nextStart);
+    state.nextStart = at + gap;
+    while (Date.now() < at && !state.stop) await sleep(Math.min(250, at - Date.now()));
+  }
+
+  function renderSpeed() {
+    const box = $("speedChips");
+    box.innerHTML = "";
+    [...SPEEDS.map((x) => x[0]), "Custom"].forEach((name) => {
+      const c = document.createElement("button");
+      c.className = "chip" + (state.speed === name ? " active" : "");
+      c.textContent = name;
+      c.onclick = () => {
+        state.speed = name;
+        const p = SPEEDS.find((x) => x[0] === name);
+        if (p) { $("conc").value = p[1]; $("gap").value = p[2]; }
+        speedChanged();
+      };
+      box.appendChild(c);
+    });
+  }
+  function speedChanged() {
+    $("concVal").textContent = $("conc").value;
+    $("gapVal").textContent = $("gap").value + "s";
+    $("speedPill").textContent = state.speed;
+    [...$("speedChips").children].forEach((c) => c.classList.toggle("active", c.textContent === state.speed));
+    store.set("speed", state.speed);
+    store.set("conc", $("conc").value);
+    store.set("gap", $("gap").value);
+    spawnWorkers(); // apply new parallel count to a running batch
+  }
+  ["conc", "gap"].forEach((id) => $(id).addEventListener("input", () => {
+    const p = SPEEDS.find((x) => String(x[1]) === $("conc").value && String(x[2]) === $("gap").value);
+    state.speed = p ? p[0] : "Custom";
+    speedChanged();
+  }));
+
+  /* ---------- speed advisor ---------- */
+  // Watches the last 20 images; on a limit or many failures it suggests a slower speed.
+  function noteOutcome(kind) {
+    state.recent.push(kind);
+    if (state.recent.length > 20) state.recent.shift();
+    checkSpeed(kind);
+  }
+  function slowerSetting() {
+    const conc = Number($("conc").value), gap = Number($("gap").value);
+    const idx = SPEEDS.findIndex((x) => x[0] === state.speed);
+    if (idx > 0) return { name: SPEEDS[idx - 1][0], conc: SPEEDS[idx - 1][1], gap: SPEEDS[idx - 1][2] };
+    if (idx === 0) return null; // already Safe
+    const nc = Math.max(1, Math.floor(conc / 2));
+    const ng = Math.min(15, Math.max(gap * 2, gap + 2));
+    if (nc === conc && ng === gap) return null;
+    const p = SPEEDS.find((x) => x[1] === nc && x[2] === ng);
+    return { name: p ? p[0] : "Custom", conc: nc, gap: ng };
+  }
+  function checkSpeed(kind) {
+    if (state.advice || Date.now() < state.adviceMuteUntil) return;
+    const n = state.recent.length;
+    const lim = state.recent.filter((k) => k === "limit").length;
+    const fail = state.recent.filter((k) => k === "fail").length;
+    if (!(kind === "limit" || (n >= 6 && (lim + fail) / n >= 0.25))) return;
+    const next = slowerSetting();
+    state.advice = next || { none: true };
+    const why = n < 6 ? "Limit aa gayi" : `Pichli ${n} images mein ${fail} failed` + (lim ? `, ${lim} baar limit` : "");
+    $("adviseTitle").textContent = next ? "Speed zyada hai, kam karein" : "Speed pehle hi sabse kam hai";
+    $("adviseText").textContent = next
+      ? `${why}. Recommended: ${next.name} (${next.conc} at a time, ${next.gap}s gap)`
+      : `${why}. Shayad aaj ki limit khatam ho rahi hai. Thori der baad try karein.`;
+    $("adviseApply").classList.toggle("hide", !next);
+    $("adviseBar").classList.remove("hide");
+    toast(next ? `Speed kam karein: ${next.name} recommended` : "Limit khatam ho rahi hai", "bad");
+  }
+  function closeAdvice(mute) {
+    state.advice = null;
+    state.recent = [];
+    if (mute) state.adviceMuteUntil = Date.now() + 3 * 60000;
+    $("adviseBar").classList.add("hide");
+  }
+
   /* ---------- auto-pause ---------- */
   let pauseTimer = null;
   const isPaused = () => state.pausedUntil > Date.now();
@@ -1434,6 +1611,8 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     const ms = Math.min(base * Math.pow(2, state.pauseLevel), 15 * 60000); // waits longer each time, max 15 min
     state.pauseLevel++;
     state.pausedUntil = Date.now() + ms;
+    state.session.limitHits++;
+    if (state.session.limitAt === null) { state.session.limitAt = state.session.images; state.session.limitSpeed = speedLabel(); }
     $("pauseBar").classList.remove("hide");
     clearInterval(pauseTimer);
     pauseTimer = setInterval(tickPause, 1000);
@@ -1596,6 +1775,18 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     runQueue();
   };
   $("resumeNow").onclick = () => endPause();
+  $("adviseApply").onclick = () => {
+    const a = state.advice;
+    if (a && !a.none) {
+      $("conc").value = a.conc;
+      $("gap").value = a.gap;
+      state.speed = a.name;
+      speedChanged();
+      toast(`Speed: ${a.name} (${a.conc} at a time, ${a.gap}s gap)`, "ok");
+    }
+    closeAdvice(false);
+  };
+  $("adviseClose").onclick = () => closeAdvice(true);
   $("retryFlagBtn").onclick = () => { if (!state.running) requeue(state.items.filter(isFlagged), true); };
 
   document.querySelectorAll("#filters button").forEach((b) => (b.onclick = () => {
@@ -1683,7 +1874,7 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
   });
 
   // persist inputs
-  [["ccDesc", ""], ["scDesc", ""], ["suffix", ""], ["fmt", "png"], ["engine", "auto"], ["conc", "2"], ["retries", "4"], ["mImagen", DEFAULT_IMAGEN], ["mGemini", DEFAULT_GEMINI], ["mThumb", DEFAULT_THUMB], ["tQuality", "4K"], ["tVariants", "4"], ["pauseMin", "2"], ["mQa", DEFAULT_QA], ["qaLevel", "6"], ["qaRetry", "1"]].forEach(([id, d]) => {
+  [["ccDesc", ""], ["scDesc", ""], ["suffix", ""], ["fmt", "png"], ["engine", "auto"], ["retries", "4"], ["mImagen", DEFAULT_IMAGEN], ["mGemini", DEFAULT_GEMINI], ["mThumb", DEFAULT_THUMB], ["tQuality", "4K"], ["tVariants", "4"], ["pauseMin", "2"], ["mQa", DEFAULT_QA], ["qaLevel", "6"], ["qaRetry", "1"]].forEach(([id, d]) => {
     const el = $(id);
     el.value = store.get(id, d);
     el.addEventListener("input", () => store.set(id, el.value));
@@ -1736,6 +1927,10 @@ details.adv .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
   bindToggle("ccToggle", "ccBody");
   bindToggle("scToggle", "scBody");
   bindToggle("qaToggle", "qaBody", true);
+  $("conc").value = store.get("conc", "2");
+  $("gap").value = store.get("gap", "2");
+  renderSpeed();
+  speedChanged();
   setMode(store.get("mode", "story"), true);
   renderStyles();
   renderRefs("cc");

@@ -64,6 +64,22 @@ Sidebar mein **AI Quality Check** on rakhein (default on).
 - **Images per row:** `+` se preview bara (kam images per line), `−` se chhota (zyada images per line), ya dropdown se 1 se 10 tak.
 - **Hide details** se image ke neeche ka text chhup jata hai aur sirf images dikhti hain.
 
+## Generation Speed
+
+Sidebar ke **Generation Speed** card se speed chunein:
+
+| Preset | Ek saath images | Har image ke darmiyan gap |
+|---|---|---|
+| Safe | 1 | 6s |
+| Normal | 2 | 2s |
+| Fast | 4 | 0.5s |
+| Turbo | 6 | 0s |
+
+- Dono sliders khud hila kar **Custom** speed bhi bana sakte hain (1-8 images, 0-15s gap).
+- Speed batch chalte waqt bhi badal sakte hain, foran lagti hai.
+- **Smart alert:** tool pichli 20 images dekhta rehta hai. Limit aaye ya 25% se zyada images fail hon to laal patti aati hai: *"Speed zyada hai, kam karein. Recommended: …"*. **Apply** dabane se speed ek darja kam ho jati hai. Safety filter wali ghaltiyan is mein nahi ginti jatin.
+- **Limit test:** progress panel ke neeche likha hota hai ke is session mein kitni images aur requests hui, aur pehli limit kitni images ke baad aur kis speed par aayi. Is se apne Canvas ki asal limit ka andaza lagayein.
+
 ## Auto-pause
 
 Limit (429) aate hi tool ruk jata hai, upar countdown dikhata hai aur waqt poora hone par khud dobara shuru ho jata hai. Har baar intezaar thora lamba hota hai, zyada se zyada 15 minute. **Resume now** se foran shuru kar sakte hain. Settings **Advanced** mein hain.
